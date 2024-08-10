@@ -22,8 +22,9 @@ async function getModel(modelName: string) {
       return mistral("mistral-large-latest");
     case "claude-3-5-sonnet":
       return anthropic("claude-3-5-sonnet-20240620");
-    case "llama-v3p1-405b-instruct":
+    case "llama-v3p1-405b":
       return fireworks("accounts/fireworks/models/llama-v3p1-405b-instruct");
+
     default:
       throw new Error(`Unsupported model name: ${modelName}`);
   }
@@ -56,16 +57,24 @@ async function generateResponse(
   return stream.value;
 }
 
-export async function generateSummary(document: string, language: string) {
+export async function generateSummary(
+  document: string,
+  language: string,
+  modelName: string
+) {
   const systemPrompt =
     "You are a helpful translation assistant. Your job is to generate a summary of the provided document in the provided language. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
   const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
-  return generateResponse(systemPrompt, userPrompt, "gpt-4o");
+  return generateResponse(systemPrompt, userPrompt, modelName);
 }
 
-export async function generateAnswer(document: string, question: string) {
+export async function generateAnswer(
+  document: string,
+  question: string,
+  modelName: string
+) {
   const systemPrompt =
     "You are a helpful question and answer assistant. Your job is to generate an answer to the provided question based on the provided document. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
   const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
-  return generateResponse(systemPrompt, userPrompt, "gpt-4o");
+  return generateResponse(systemPrompt, userPrompt, modelName);
 }

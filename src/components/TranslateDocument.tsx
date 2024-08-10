@@ -48,15 +48,17 @@ const languages: Language[] = [
 
 import * as Y from "yjs";
 import { Button } from "./ui/button";
-import { BotIcon, LanguagesIcon } from "lucide-react";
+import { LanguagesIcon } from "lucide-react";
 import { toast } from "sonner";
 import { generateSummary } from "@/lib/generateActions";
 import { readStreamableValue } from "ai/rsc";
+import { MODELNAMES } from "@/constants/modelNames"; // Ensure this is the correct path
 
 type Props = { doc: Y.Doc };
 export default function TranslateDocument({ doc }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [language, setLanguage] = useState<string>("");
+  const [modelName, setModelName] = useState<string>("gpt-4o"); // Default model
   const [summary, setSummary] = useState("");
   const [isPending, setIsPending] = useState(false);
 
@@ -66,7 +68,7 @@ export default function TranslateDocument({ doc }: Props) {
     try {
       const documentData = doc.get("document-store").toJSON();
 
-      const result = await generateSummary(documentData, language);
+      const result = await generateSummary(documentData, language, modelName);
       for await (const content of readStreamableValue(result)) {
         if (content) {
           setSummary(content.trim());
@@ -91,17 +93,17 @@ export default function TranslateDocument({ doc }: Props) {
         </DialogTrigger>
       </Button>
 
-      <DialogContent>
+      <DialogContent className="flex flex-col gap-3 w-[90vw] max-w-4xl max-h-[30rem] h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Translate the Document</DialogTitle>
           <DialogDescription>
-            Select a Language and AI will translate a summary of the document in
-            the selected language.
+            Select a Language and Model, and AI will translate a summary of the
+            document in the selected language.
           </DialogDescription>
           <hr className="my-2" />
         </DialogHeader>
 
-        <form className="flex gap-2" onSubmit={handleSummary}>
+        <form className="flex items-center gap-4" onSubmit={handleSummary}>
           <Select
             value={language}
             onValueChange={(value) => setLanguage(value)}
@@ -118,13 +120,29 @@ export default function TranslateDocument({ doc }: Props) {
             </SelectContent>
           </Select>
 
+          <Select
+            value={modelName}
+            onValueChange={(value) => setModelName(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Model" />
+            </SelectTrigger>
+            <SelectContent>
+              {MODELNAMES.map((model) => (
+                <SelectItem key={model.value} value={model.value}>
+                  {model.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button type="submit" disabled={!language || isPending}>
             {isPending ? "Translating..." : "Translate"}
           </Button>
         </form>
 
         {summary && (
-          <div className="flex flex-col items-start max-h-96 overflow-y-scroll gap-2 p-5 bg-gray-100">
+          <div className="mt-4 p-5 bg-gray-100 rounded-md max-h-64 overflow-y-auto">
             <Markdown>{summary}</Markdown>
           </div>
         )}

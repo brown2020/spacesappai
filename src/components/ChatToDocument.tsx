@@ -18,12 +18,21 @@ import { MessageCircleCode } from "lucide-react";
 import Markdown from "react-markdown";
 import { generateAnswer } from "@/lib/generateActions";
 import { readStreamableValue } from "ai/rsc";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MODELNAMES } from "@/constants/modelNames"; // Ensure this is the correct path
 
 type Props = { doc: Y.Doc };
 export default function ChatToDocument({ doc }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [question, setQuestion] = useState("");
+  const [modelName, setModelName] = useState<string>("gpt-4o"); // Default model
   const [summary, setSummary] = useState("");
 
   const handleAskQuestion = async (e: React.FormEvent) => {
@@ -32,7 +41,7 @@ export default function ChatToDocument({ doc }: Props) {
     try {
       const documentData = doc.get("document-store").toJSON();
 
-      const result = await generateAnswer(documentData, question);
+      const result = await generateAnswer(documentData, question, modelName);
       for await (const content of readStreamableValue(result)) {
         if (content) {
           setSummary(content.trim());
@@ -56,7 +65,7 @@ export default function ChatToDocument({ doc }: Props) {
         </DialogTrigger>
       </Button>
 
-      <DialogContent>
+      <DialogContent className="flex flex-col gap-3 w-[90vw] max-w-4xl max-h-[30rem] h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ask a question to the document</DialogTitle>
           <DialogDescription>
@@ -64,7 +73,7 @@ export default function ChatToDocument({ doc }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form className="flex gap-2" onSubmit={handleAskQuestion}>
+        <form className="flex items-center gap-4" onSubmit={handleAskQuestion}>
           <Input
             type="text"
             placeholder="i.e. What is this about?"
@@ -72,13 +81,30 @@ export default function ChatToDocument({ doc }: Props) {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
           />
+
+          <Select
+            value={modelName}
+            onValueChange={(value) => setModelName(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Model" />
+            </SelectTrigger>
+            <SelectContent>
+              {MODELNAMES.map((model) => (
+                <SelectItem key={model.value} value={model.value}>
+                  {model.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button type="submit" disabled={!question || isPending}>
             {isPending ? "Asking..." : "Ask"}
           </Button>
         </form>
 
         {summary && (
-          <div className="flex flex-col items-start max-h-96 overflow-y-scroll gap-2 p-5 bg-gray-100">
+          <div className="mt-4 p-5 bg-gray-100 rounded-md max-h-64 overflow-y-auto">
             <Markdown>{summary}</Markdown>
           </div>
         )}
