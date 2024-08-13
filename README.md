@@ -1,4 +1,3 @@
-````markdown
 # SpacesApp
 
 SpacesApp is a collaborative document editing application inspired by Sonny Sangha's tutorials, enhanced with AI-driven features for real-time collaboration and document interaction. It utilizes cutting-edge technologies like Vercel AI SDK, React Server Actions, and LiveBlocks to offer a seamless, live-editing experience similar to Notion, with integrated AI models for advanced document processing.
@@ -39,7 +38,6 @@ SpacesApp is a collaborative document editing application inspired by Sonny Sang
    git clone https://github.com/yourusername/spacesapp.git
    cd spacesapp
    ```
-````
 
 2. **Install dependencies:**
 
@@ -131,7 +129,3 @@ Contributions are welcome! Please open an issue or submit a pull request with yo
 ## License
 
 This project is licensed under the MIT License.
-
-```
-
-```
