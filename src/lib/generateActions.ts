@@ -6,6 +6,7 @@ import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
+import { auth } from "@clerk/nextjs/server";
 
 const fireworks = createOpenAI({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
@@ -35,6 +36,7 @@ async function generateResponse(
   userPrompt: string,
   modelName: string
 ) {
+  auth().protect();
   const model = await getModel(modelName);
 
   const messages: CoreMessage[] = [
@@ -62,6 +64,7 @@ export async function generateSummary(
   language: string,
   modelName: string
 ) {
+  auth().protect();
   const systemPrompt =
     "You are a helpful translation assistant. Your job is to generate a summary of the provided document in the provided language. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
   const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
@@ -73,6 +76,7 @@ export async function generateAnswer(
   question: string,
   modelName: string
 ) {
+  auth().protect();
   const systemPrompt =
     "You are a helpful question and answer assistant. Your job is to generate an answer to the provided question based on the provided document. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
   const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
