@@ -6,8 +6,7 @@ import { DocumentSnapshot } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   try {
-    auth().protect();
-    const { sessionClaims } = await auth();
+    const { sessionClaims } = await auth().protect();
     const { room } = await req.json();
 
     const session = liveblocks.prepareSession(
@@ -15,7 +14,7 @@ export async function POST(req: NextRequest) {
       {
         userInfo: {
           name: sessionClaims?.fullName || "noName",
-          email: sessionClaims?.email || "noEmail",
+          email: sessionClaims?.email || "",
           avatar: sessionClaims?.image || "",
         },
       }
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const usersInRoom = await adminDb
       .collectionGroup("rooms")
-      .where("userId", "==", sessionClaims?.email)
+      .where("userId", "==", sessionClaims?.email || "")
       .get();
 
     const userInRoom = usersInRoom.docs.find(
@@ -33,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (userInRoom) {
       session.allow(room, session.FULL_ACCESS);
       const { body, status } = await session.authorize();
-      return new Response(body, { status });
+      return new NextResponse(body, { status });
     } else {
       return NextResponse.json(
         { message: "You are not in this room" },
