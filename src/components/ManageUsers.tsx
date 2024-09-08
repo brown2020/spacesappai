@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { useState, useTransition } from "react";
 import { Button } from "./ui/button";
-import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import useOwner from "@/lib/useOwner";

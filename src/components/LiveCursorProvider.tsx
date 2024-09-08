@@ -3,7 +3,7 @@ import FollowPointer from "./FollowPointer";
 
 type Props = { children: React.ReactNode };
 export default function LiveCursorProvider({ children }: Props) {
-  const [myPresence, updateMyPresence] = useMyPresence();
+  const [, updateMyPresence] = useMyPresence();
   const others = useOthers();
 
   function handlePointerMove(e: React.PointerEvent) {

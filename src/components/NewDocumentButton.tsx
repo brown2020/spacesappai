@@ -5,9 +5,7 @@ import { Button } from "./ui/button";
 import { useTransition } from "react";
 import { createNewDocument } from "@/lib/documentActions";
 
-type Props = {};
-
-export default function NewDocumentButton({}: Props) {
+export default function NewDocumentButton() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 

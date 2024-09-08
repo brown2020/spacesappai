@@ -10,11 +10,7 @@ type Props = {
   x: number;
   y: number;
 };
-export default function FollowPointer({
-  info: { name, email, avatar },
-  x,
-  y,
-}: Props) {
+export default function FollowPointer({ info: { name, email }, x, y }: Props) {
   const color = stringToColor(email || "1");
   return (
     <motion.div

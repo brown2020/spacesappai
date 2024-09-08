@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState, useTransition } from "react";
 import { Button } from "./ui/button";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { inviteUserToDocument } from "@/lib/documentActions";

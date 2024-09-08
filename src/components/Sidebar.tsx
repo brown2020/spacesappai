@@ -29,8 +29,7 @@ interface RoomDocument extends DocumentData {
   userId: string;
 }
 
-type Props = {};
-export default function Sidebar({}: Props) {
+export default function Sidebar() {
   const { user } = useUser();
 
   const [groupedData, setGroupedData] = useState<{
@@ -38,7 +37,7 @@ export default function Sidebar({}: Props) {
     editor: RoomDocument[];
   }>({ owner: [], editor: [] });
 
-  const [data, loading, error] = useCollection(
+  const [data] = useCollection(
     user &&
       query(
         collectionGroup(db, "rooms"),

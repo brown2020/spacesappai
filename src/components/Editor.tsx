@@ -42,8 +42,7 @@ function BlockNote({ doc, provider, darkMode }: EditorProps) {
   );
 }
 
-type Props = {};
-export default function Editor({}: Props) {
+export default function Editor() {
   const room = useRoom();
   const [doc, setDoc] = useState<Y.Doc>();
   const [provider, setProvider] = useState<LiveblocksYjsProvider>();
