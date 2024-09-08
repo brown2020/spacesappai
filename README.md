@@ -35,7 +35,7 @@ SpacesApp is a collaborative document editing application inspired by Sonny Sang
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/yourusername/spacesapp.git
+   git clone https://github.com/brown2020/spacesapp.git
    cd spacesapp
    ```
 
