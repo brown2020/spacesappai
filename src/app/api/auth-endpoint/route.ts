@@ -9,20 +9,30 @@ export async function POST(req: NextRequest) {
     const { sessionClaims } = await auth().protect();
     const { room } = await req.json();
 
+    // Ensure sessionClaims?.email is a valid string
+    const email =
+      typeof sessionClaims?.email === "string"
+        ? sessionClaims.email
+        : "noEmail";
+
     const session = liveblocks.prepareSession(
-      sessionClaims?.email || "noEmail",
+      email, // email is guaranteed to be a string here
       {
         userInfo: {
-          name: sessionClaims?.fullName || "noName",
-          email: sessionClaims?.email || "",
-          avatar: sessionClaims?.image || "",
+          name:
+            typeof sessionClaims?.fullName === "string"
+              ? sessionClaims.fullName
+              : "noName",
+          email: email,
+          avatar:
+            typeof sessionClaims?.image === "string" ? sessionClaims.image : "",
         },
       }
     );
 
     const usersInRoom = await adminDb
       .collectionGroup("rooms")
-      .where("userId", "==", sessionClaims?.email || "")
+      .where("userId", "==", email)
       .get();
 
     const userInRoom = usersInRoom.docs.find(

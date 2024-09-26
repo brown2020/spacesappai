@@ -21,13 +21,17 @@ export async function createNewDocument(): Promise<Response> {
       title: "New Doc",
     });
 
+    // Ensure sessionClaims?.email is a valid string
+    const email =
+      typeof sessionClaims?.email === "string" ? sessionClaims.email : "noUser";
+
     await adminDb
       .collection("users")
-      .doc(sessionClaims?.email || "noUser")
+      .doc(email) // email is guaranteed to be a string here
       .collection("rooms")
       .doc(docRef.id)
       .set({
-        userId: sessionClaims?.email || "noUser",
+        userId: email,
         role: "owner",
         createdAt: new Date(),
         roomId: docRef.id,
