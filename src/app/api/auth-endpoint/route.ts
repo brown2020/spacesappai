@@ -6,7 +6,7 @@ import { DocumentSnapshot } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionClaims } = await auth().protect();
+    const { sessionClaims } = await auth.protect();
     const { room } = await req.json();
 
     // Ensure sessionClaims?.email is a valid string

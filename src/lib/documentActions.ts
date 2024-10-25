@@ -11,9 +11,7 @@ interface Response {
 }
 
 export async function createNewDocument(): Promise<Response> {
-  auth().protect();
-
-  const { sessionClaims } = await auth();
+  const { sessionClaims } = await auth.protect();
 
   try {
     const docCollectionRef = adminDb.collection("documents");
@@ -45,7 +43,7 @@ export async function createNewDocument(): Promise<Response> {
 }
 
 export async function deleteDocument(roomId: string): Promise<Response> {
-  auth().protect();
+  await auth.protect();
 
   try {
     await adminDb.collection("documents").doc(roomId).delete();
@@ -74,7 +72,7 @@ export async function inviteUserToDocument(
   roomId: string,
   email: string
 ): Promise<Response> {
-  auth().protect();
+  await auth.protect();
 
   try {
     await adminDb
@@ -99,7 +97,7 @@ export async function removeUserFromDocument(
   roomId: string,
   userId: string
 ): Promise<Response> {
-  auth().protect();
+  await auth.protect();
 
   try {
     await adminDb
