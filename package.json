@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.53",
-    "@ai-sdk/google": "^0.0.54",
+    "@ai-sdk/google": "^0.0.55",
     "@ai-sdk/mistral": "^0.0.46",
     "@ai-sdk/openai": "^0.0.70",
     "@blocknote/core": "^0.17.1",
@@ -33,7 +33,7 @@
     "firebase": "^11.0.0",
     "firebase-admin": "^12.5.0",
     "framer-motion": "^11.5.6",
-    "lucide-react": "^0.453.0",
+    "lucide-react": "^0.454.0",
     "next": "^14.2.13",
     "next-themes": "^0.3.0",
     "react": "^18",
