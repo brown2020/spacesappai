@@ -48,13 +48,14 @@
     "yjs": "^13.6.19"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.9",
     "@types/node": "^22.5.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.0.4",
     "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "^4.0.9",
     "typescript": "^5.6.2"
   }
 }
