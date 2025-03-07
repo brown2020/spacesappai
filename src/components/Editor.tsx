@@ -6,7 +6,6 @@ import * as Y from "yjs";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { BlockNoteEditor } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
@@ -21,16 +20,21 @@ type EditorProps = {
 };
 function BlockNote({ doc, provider, darkMode }: EditorProps) {
   const userInfo = useSelf((me) => me.info);
-  const editor: BlockNoteEditor = useCreateBlockNote({
-    collaboration: {
-      provider,
-      fragment: doc.getXmlFragment("document-store"),
-      user: {
-        name: userInfo?.name || "Anonymous",
-        color: stringToColor(userInfo?.email || "1"),
+
+  const editor = useCreateBlockNote(
+    {
+      collaboration: {
+        provider,
+        fragment: doc.getXmlFragment("document-store"),
+        user: {
+          name: userInfo?.name || "Anonymous",
+          color: stringToColor(userInfo?.email || "1"),
+        },
       },
     },
-  });
+    [doc, provider, userInfo?.name, userInfo?.email]
+  );
+
   return (
     <div className="relative max-w-6xl mx-auto">
       <BlockNoteView
