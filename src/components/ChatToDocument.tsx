@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { MessageCircleCode } from "lucide-react";
 import Markdown from "react-markdown";
 import { generateAnswer } from "@/lib/generateActions";
-import { readStreamableValue } from "ai/rsc";
+import { readStreamableValue } from '@ai-sdk/rsc';
 import {
   Select,
   SelectContent,

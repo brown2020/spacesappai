@@ -1,7 +1,7 @@
 "use server";
 
-import { createStreamableValue } from "ai/rsc";
-import { CoreMessage, streamText } from "ai";
+import { createStreamableValue } from '@ai-sdk/rsc';
+import { ModelMessage, streamText } from "ai";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
@@ -39,7 +39,7 @@ async function generateResponse(
   await auth.protect();
   const model = await getModel(modelName);
 
-  const messages: CoreMessage[] = [
+  const messages: ModelMessage[] = [
     {
       role: "system",
       content: systemPrompt,

@@ -51,7 +51,7 @@ import { Button } from "./ui/button";
 import { LanguagesIcon } from "lucide-react";
 import { toast } from "sonner";
 import { generateSummary } from "@/lib/generateActions";
-import { readStreamableValue } from "ai/rsc";
+import { readStreamableValue } from '@ai-sdk/rsc';
 import { MODELNAMES } from "@/constants/modelNames"; // Ensure this is the correct path
 
 type Props = { doc: Y.Doc };
