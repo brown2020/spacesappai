@@ -6,7 +6,6 @@ import {
 } from "@liveblocks/react/suspense";
 
 import { ClipLoader } from "react-spinners";
-import LiveCursorProvider from "./LiveCursorProvider";
 
 type Props = { roomId: string; children: React.ReactNode };
 export default function RoomProvider({ roomId, children }: Props) {
@@ -19,7 +18,7 @@ export default function RoomProvider({ roomId, children }: Props) {
           </div>
         }
       >
-        <LiveCursorProvider>{children}</LiveCursorProvider>
+        {children}
       </ClientSideSuspense>
     </RoomProviderWrapper>
   );

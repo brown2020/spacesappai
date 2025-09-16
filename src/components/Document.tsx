@@ -10,6 +10,7 @@ import useOwner from "@/lib/useOwner";
 import DeleteDocument from "./DeleteDocument";
 import InviteUser from "./InviteUser";
 import ManageUsers from "./ManageUsers";
+import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
 import { db } from "@/firebase/firebaseConfig";
 
@@ -19,6 +20,7 @@ export default function Document({ id }: Props) {
   const [input, setInput] = useState("");
   const [isUpdating, startTransition] = useTransition();
   const isOwner = useOwner();
+  const [isEditorReady, setIsEditorReady] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -60,11 +62,17 @@ export default function Document({ id }: Props) {
       </div>
       <div className="flex max-w-6xl mx-auto justify-between items-center mb-5">
         <ManageUsers />
-        <Avatars />
+        {isEditorReady && <Avatars />}
       </div>
       <hr className="pb-10" />
 
-      <Editor />
+      {isEditorReady ? (
+        <LiveCursorProvider>
+          <Editor onReady={() => {}} />
+        </LiveCursorProvider>
+      ) : (
+        <Editor onReady={() => setIsEditorReady(true)} />
+      )}
     </div>
   );
 }
