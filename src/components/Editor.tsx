@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRoom, useSelf } from "@liveblocks/react/suspense";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
@@ -38,8 +38,15 @@ function BlockNote({
 }: BlockNoteProps) {
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const hasSignaledReadyRef = useRef(false);
+  const onReadyRef = useRef(onReady);
+
+  // Keep onReady ref updated to avoid stale closures
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   useEffect(() => {
+    // Create editor instance
     const createdEditor = BlockNoteEditor.create({
       collaboration: {
         provider,
@@ -54,15 +61,19 @@ function BlockNote({
     setEditor(createdEditor);
 
     // Signal readiness once after creating the editor
-    if (!hasSignaledReadyRef.current && onReady) {
+    if (!hasSignaledReadyRef.current && onReadyRef.current) {
       hasSignaledReadyRef.current = true;
-      onReady();
+      // Use setTimeout to avoid calling during render
+      setTimeout(() => onReadyRef.current?.(), 0);
     }
 
+    // Cleanup: properly destroy editor
     return () => {
       setEditor(null);
+      // Note: BlockNoteEditor doesn't have a destroy method
+      // The collaboration provider cleanup is handled in parent
     };
-  }, [doc, provider, userName, userEmail, onReady]);
+  }, [doc, provider, userName, userEmail]);
 
   if (!editor) return null;
 
@@ -134,6 +145,11 @@ export default function Editor({ onReady }: EditorProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Stable callback reference
+  const handleToggleDarkMode = useCallback(() => {
+    setDarkMode((prev) => !prev);
+  }, []);
+
   // Initialize Yjs document and Liveblocks provider
   useEffect(() => {
     if (!room) return;
@@ -145,8 +161,9 @@ export default function Editor({ onReady }: EditorProps) {
     setProvider(yProvider);
 
     return () => {
-      yDoc.destroy();
+      // Proper cleanup order: provider first, then doc
       yProvider.destroy();
+      yDoc.destroy();
     };
   }, [room]);
 
@@ -165,7 +182,7 @@ export default function Editor({ onReady }: EditorProps) {
       <EditorToolbar
         doc={doc}
         darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode((prev) => !prev)}
+        onToggleDarkMode={handleToggleDarkMode}
       />
 
       <BlockNote

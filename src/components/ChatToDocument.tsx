@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as Y from "yjs";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -46,10 +46,28 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
   const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
   const [answer, setAnswer] = useState("");
 
+  // Track if component is still mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  // Track current request to allow cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cancel any pending request on unmount
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!question.trim()) return;
+
+    // Cancel any previous request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     setIsPending(true);
     setAnswer("");
@@ -59,26 +77,42 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
       const result = await generateAnswer(documentData, question, modelName);
 
       for await (const content of readStreamableValue(result)) {
+        // Check if component is still mounted before updating state
+        if (!isMountedRef.current) break;
+
         if (content) {
           setAnswer(content.trim());
         }
       }
 
-      toast.success("Question answered successfully");
+      // Only show toast if still mounted
+      if (isMountedRef.current) {
+        toast.success("Question answered successfully");
+      }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === "AbortError") return;
+
       console.error("[ChatToDocument] Error:", error);
-      toast.error("Failed to get answer. Please try again.");
+      if (isMountedRef.current) {
+        toast.error("Failed to get answer. Please try again.");
+      }
     } finally {
-      setIsPending(false);
+      if (isMountedRef.current) {
+        setIsPending(false);
+      }
     }
   };
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
+      // Cancel any pending request when closing
+      abortControllerRef.current?.abort();
       // Reset state when closing
       setQuestion("");
       setAnswer("");
+      setIsPending(false);
     }
   };
 

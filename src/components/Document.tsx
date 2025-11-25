@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useCallback } from "react";
 import { useDocumentTitle, useOwner } from "@/hooks";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -82,9 +82,10 @@ interface DocumentProps {
 export default function Document({ id }: DocumentProps) {
   const [isEditorReady, setIsEditorReady] = useState(false);
 
-  const handleEditorReady = () => {
+  // Stable callback to prevent re-renders
+  const handleEditorReady = useCallback(() => {
     setIsEditorReady(true);
-  };
+  }, []);
 
   return (
     <article className="flex-1 h-full bg-white p-5">
@@ -93,14 +94,13 @@ export default function Document({ id }: DocumentProps) {
 
       <hr className="pb-10" />
 
-      {/* Render editor with live cursors once ready */}
-      {isEditorReady ? (
-        <LiveCursorProvider>
-          <Editor />
-        </LiveCursorProvider>
-      ) : (
+      {/* 
+        FIX: Always render Editor inside LiveCursorProvider to prevent re-mounting
+        The onReady callback is stable so it won't cause unnecessary re-renders
+      */}
+      <LiveCursorProvider>
         <Editor onReady={handleEditorReady} />
-      )}
+      </LiveCursorProvider>
     </article>
   );
 }

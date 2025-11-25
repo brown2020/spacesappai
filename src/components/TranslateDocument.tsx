@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as Y from "yjs";
 import { toast } from "sonner";
 import Markdown from "react-markdown";
@@ -50,10 +50,28 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
   const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
   const [summary, setSummary] = useState("");
 
+  // Track if component is still mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  // Track current request to allow cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cancel any pending request on unmount
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const handleTranslate = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!language) return;
+
+    // Cancel any previous request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     setIsPending(true);
     setSummary("");
@@ -63,26 +81,42 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
       const result = await generateSummary(documentData, language, modelName);
 
       for await (const content of readStreamableValue(result)) {
+        // Check if component is still mounted before updating state
+        if (!isMountedRef.current) break;
+
         if (content) {
           setSummary(content.trim());
         }
       }
 
-      toast.success(`Summary translated to ${LANGUAGE_LABELS[language]}`);
+      // Only show toast if still mounted
+      if (isMountedRef.current) {
+        toast.success(`Summary translated to ${LANGUAGE_LABELS[language]}`);
+      }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === "AbortError") return;
+
       console.error("[TranslateDocument] Error:", error);
-      toast.error("Failed to translate. Please try again.");
+      if (isMountedRef.current) {
+        toast.error("Failed to translate. Please try again.");
+      }
     } finally {
-      setIsPending(false);
+      if (isMountedRef.current) {
+        setIsPending(false);
+      }
     }
   };
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
+      // Cancel any pending request when closing
+      abortControllerRef.current?.abort();
       // Reset state when closing
       setLanguage("");
       setSummary("");
+      setIsPending(false);
     }
   };
 

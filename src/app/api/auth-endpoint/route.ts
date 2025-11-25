@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { DocumentSnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/firebase/firebaseAdmin";
 import { liveblocks } from "@/lib/liveblocks";
 
@@ -40,20 +39,21 @@ function getUserInfo(sessionClaims: Record<string, unknown> | null) {
 }
 
 /**
- * Check if user has access to the room
+ * Check if user has access to a specific room
+ * More efficient: queries only the specific room document instead of all rooms
  */
 async function hasRoomAccess(
   userEmail: string,
   roomId: string
 ): Promise<boolean> {
-  const usersInRoom = await adminDb
-    .collectionGroup("rooms")
-    .where("userId", "==", userEmail)
+  const roomDoc = await adminDb
+    .collection("users")
+    .doc(userEmail)
+    .collection("rooms")
+    .doc(roomId)
     .get();
 
-  return usersInRoom.docs.some(
-    (doc: DocumentSnapshot) => doc.id === roomId
-  );
+  return roomDoc.exists;
 }
 
 /**
@@ -78,15 +78,27 @@ export async function POST(req: NextRequest) {
     const userInfo = getUserInfo(sessionClaims);
 
     // Parse request body
-    const body = (await req.json()) as AuthRequestBody;
+    let body: AuthRequestBody;
+    try {
+      body = await req.json();
+    } catch {
+      return errorResponse(400, "Bad Request", "Invalid JSON body");
+    }
+
     const { room } = body;
 
-    if (!room) {
+    if (!room || typeof room !== "string") {
       return errorResponse(400, "Bad Request", "Room ID is required");
     }
 
-    // Check room access
-    const hasAccess = await hasRoomAccess(userInfo.email, room);
+    // Sanitize room ID
+    const roomId = room.trim();
+    if (!roomId) {
+      return errorResponse(400, "Bad Request", "Room ID cannot be empty");
+    }
+
+    // Check room access (efficient single document lookup)
+    const hasAccess = await hasRoomAccess(userInfo.email, roomId);
 
     if (!hasAccess) {
       return errorResponse(
@@ -106,7 +118,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Grant full access to the room
-    session.allow(room, session.FULL_ACCESS);
+    session.allow(roomId, session.FULL_ACCESS);
 
     // Authorize and return response
     const { body: authBody, status } = await session.authorize();
@@ -114,9 +126,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[auth-endpoint] Error:", error);
 
-    const message =
-      error instanceof Error ? error.message : "An unexpected error occurred";
-
-    return errorResponse(500, "Internal Server Error", message);
+    // Don't expose internal error details
+    return errorResponse(
+      500,
+      "Internal Server Error",
+      "An unexpected error occurred. Please try again."
+    );
   }
 }
