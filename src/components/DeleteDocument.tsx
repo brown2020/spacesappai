@@ -1,5 +1,10 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { deleteDocument } from "@/lib/documentActions";
+import { Button } from "./ui/button";
 import {
   Dialog,
   DialogClose,
@@ -10,64 +15,78 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, useTransition } from "react";
-import { Button } from "./ui/button";
-import { usePathname, useRouter } from "next/navigation";
-import { deleteDocument } from "@/lib/documentActions";
-import { toast } from "sonner";
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract room ID from pathname
+ */
+function getRoomIdFromPath(pathname: string): string | null {
+  const segments = pathname.split("/");
+  return segments[segments.length - 1] || null;
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function DeleteDocument() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const pathname = usePathname();
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleDelete = async () => {
-    const roomId = pathname.split("/").pop();
-    if (!roomId) return;
+  const handleDelete = () => {
+    const roomId = getRoomIdFromPath(pathname);
+
+    if (!roomId) {
+      toast.error("Unable to determine document ID");
+      return;
+    }
+
     startTransition(async () => {
-      const { success } = await deleteDocument(roomId);
+      const { success, error } = await deleteDocument(roomId);
 
       if (success) {
-        // redirect to home
         setIsOpen(false);
         router.replace("/");
         toast.success("Document deleted successfully");
       } else {
-        // show error
-        toast.error("Failed to delete document");
+        toast.error(error?.message || "Failed to delete document");
       }
     });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button asChild variant="destructive">
-        <DialogTrigger>Delete</DialogTrigger>
-      </Button>
+      <DialogTrigger asChild>
+        <Button variant="destructive">Delete</Button>
+      </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Are you sure you want to Delete?</DialogTitle>
+          <DialogTitle>Delete Document?</DialogTitle>
           <DialogDescription>
-            This will delete the document and all of its contents, removing all
-            users from the document.
+            This action cannot be undone. This will permanently delete the
+            document and remove access for all collaborators.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="sm:justify-end gap-2">
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isPending}>
+              Cancel
+            </Button>
+          </DialogClose>
           <Button
-            type="button"
             variant="destructive"
             onClick={handleDelete}
             disabled={isPending}
           >
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? "Deleting..." : "Delete Document"}
           </Button>
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              Close
-            </Button>
-          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

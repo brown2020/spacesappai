@@ -8,38 +8,81 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
-export default function Avatars() {
-  const others = useOthers();
-  const self = useSelf();
+// ============================================================================
+// AVATAR ITEM
+// ============================================================================
 
-  const allUsers = [self, ...others];
+interface AvatarItemProps {
+  name: string;
+  avatar?: string;
+  isSelf: boolean;
+}
+
+function AvatarItem({ name, avatar, isSelf }: AvatarItemProps) {
+  const displayName = isSelf ? "You" : name;
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <div className="flex gap-2 items-center">
-      <p className="font-light text-sm">Users currently editing this page</p>
-      <div className="flex -space-x-5">
-        {allUsers.map((user, index) => {
-          const key = `${user?.id || "self"}-${index}`;
-          const isSelf = self?.id === user?.id;
-          const name = isSelf ? "You" : user?.info.name;
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Avatar
+            className={cn(
+              "border-2 border-white cursor-pointer transition-transform hover:scale-110 hover:z-10",
+              isSelf && "ring-2 ring-purple-500"
+            )}
+          >
+            <AvatarImage src={avatar} alt={displayName} />
+            <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-medium">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          {displayName}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
-          return (
-            <TooltipProvider key={key}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="border-2 hover:z-50">
-                    <AvatarImage src={user?.info.avatar} />
-                    <AvatarFallback>{user?.info.name}</AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{name}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          );
-        })}
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export default function Avatars() {
+  const self = useSelf();
+  const others = useOthers();
+
+  // Combine self with others, self first
+  const allUsers = self ? [self, ...others] : others;
+
+  if (allUsers.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-gray-500 hidden sm:inline">
+        {allUsers.length === 1 ? "Just you" : `${allUsers.length} editing`}
+      </span>
+
+      <div className="flex -space-x-3">
+        {allUsers.map((user) => (
+          <AvatarItem
+            key={user.id}
+            name={user.info?.name || "Anonymous"}
+            avatar={user.info?.avatar}
+            isSelf={user.id === self?.id}
+          />
+        ))}
       </div>
     </div>
   );

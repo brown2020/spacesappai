@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button } from "./ui/button";
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { createNewDocument } from "@/lib/documentActions";
+import { Button } from "./ui/button";
 
 export default function NewDocumentButton() {
   const [isPending, startTransition] = useTransition();
@@ -11,10 +12,16 @@ export default function NewDocumentButton() {
 
   const handleCreateNewDocument = () => {
     startTransition(async () => {
-      const { docId } = await createNewDocument();
-      router.push(`/doc/${docId}`);
+      const { success, data, error } = await createNewDocument();
+
+      if (success && data?.docId) {
+        router.push(`/doc/${data.docId}`);
+      } else {
+        toast.error(error?.message || "Failed to create document");
+      }
     });
   };
+
   return (
     <Button onClick={handleCreateNewDocument} disabled={isPending}>
       {isPending ? "Creating..." : "New Document"}

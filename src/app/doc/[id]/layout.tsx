@@ -1,23 +1,28 @@
-// import RoomProvider from "@/components/RoomProvider";
-// import { auth } from "@clerk/nextjs/server";
-
-// type Props = { children: React.ReactNode; params: { id: string } };
-
-// export default async function layout({ children, params: { id } }: Props) {
-//   await auth.protect();
-//   return <RoomProvider roomId={id}>{children}</RoomProvider>;
-// }
-
-import RoomProvider from "@/components/RoomProvider";
 import { auth } from "@clerk/nextjs/server";
+import RoomProvider from "@/components/RoomProvider";
 
-type Props = { children: React.ReactNode; params: Promise<{ id: string }> };
+// ============================================================================
+// TYPES
+// ============================================================================
 
-export default async function layout({ children, params }: Props) {
-  const resolvedParams = await params; // Resolve the async params
-  const { id } = resolvedParams;
+interface DocumentLayoutProps {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
+}
 
-  await auth.protect(); // Ensure auth is checked before rendering
+// ============================================================================
+// DOCUMENT LAYOUT
+// ============================================================================
+
+export default async function DocumentLayout({
+  children,
+  params,
+}: DocumentLayoutProps) {
+  // Resolve async params (Next.js 16 pattern)
+  const { id } = await params;
+
+  // Protect this route - requires authentication
+  await auth.protect();
 
   return <RoomProvider roomId={id}>{children}</RoomProvider>;
 }

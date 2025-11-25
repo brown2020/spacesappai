@@ -1,27 +1,97 @@
 import admin from "firebase-admin";
-import { getApps } from "firebase-admin/app";
+import { getApps, type App } from "firebase-admin/app";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getAuth, type Auth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage";
+import type { Bucket } from "@google-cloud/storage";
+import { serverEnv } from "@/lib/env";
 
+// ============================================================================
+// FIREBASE ADMIN CONFIGURATION
+// ============================================================================
+
+/**
+ * Firebase Admin credentials from environment variables
+ */
 const adminCredentials = {
-  type: process.env.FIREBASE_TYPE,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  clientId: process.env.FIREBASE_CLIENT_ID,
-  authUri: process.env.FIREBASE_AUTH_URI,
-  tokenUri: process.env.FIREBASE_TOKEN_URI,
-  authProviderX509CertUrl: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-  clientCertsUrl: process.env.FIREBASE_CLIENT_CERTS_URL,
-};
+  type: serverEnv.firebase.type,
+  projectId: serverEnv.firebase.projectId,
+  privateKeyId: serverEnv.firebase.privateKeyId,
+  privateKey: serverEnv.firebase.privateKey,
+  clientEmail: serverEnv.firebase.clientEmail,
+  clientId: serverEnv.firebase.clientId,
+  authUri: serverEnv.firebase.authUri,
+  tokenUri: serverEnv.firebase.tokenUri,
+  authProviderX509CertUrl: serverEnv.firebase.authProviderX509CertUrl,
+  clientCertsUrl: serverEnv.firebase.clientCertsUrl,
+} as const;
 
-if (!getApps().length) {
-  admin.initializeApp({
+// ============================================================================
+// FIREBASE ADMIN INITIALIZATION
+// ============================================================================
+
+/**
+ * Initialize Firebase Admin app (singleton pattern)
+ */
+function initializeFirebaseAdmin(): App {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+
+  return admin.initializeApp({
     credential: admin.credential.cert(adminCredentials),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGEBUCKET,
   });
 }
-const adminBucket = admin.storage().bucket();
-const adminDb = admin.firestore();
-const adminAuth = admin.auth();
 
-export { adminBucket, adminDb, adminAuth, admin };
+// Initialize on module load
+initializeFirebaseAdmin();
+
+// ============================================================================
+// FIREBASE ADMIN SERVICES
+// ============================================================================
+
+/**
+ * Firestore Admin database instance
+ */
+export const adminDb: Firestore = getFirestore();
+
+/**
+ * Firebase Admin Authentication instance
+ */
+export const adminAuth: Auth = getAuth();
+
+/**
+ * Firebase Admin Storage bucket instance
+ */
+export const adminBucket: Bucket = getStorage().bucket();
+
+/**
+ * Firebase Admin SDK reference
+ */
+export { admin };
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get a document reference in admin Firestore
+ */
+export function getDocRef(collection: string, docId: string) {
+  return adminDb.collection(collection).doc(docId);
+}
+
+/**
+ * Get a collection reference in admin Firestore
+ */
+export function getCollectionRef(collection: string) {
+  return adminDb.collection(collection);
+}
+
+/**
+ * Batch write helper for multiple operations
+ */
+export function createBatch() {
+  return adminDb.batch();
+}

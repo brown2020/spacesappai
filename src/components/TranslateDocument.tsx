@@ -1,7 +1,20 @@
 "use client";
 
+import { useState } from "react";
+import * as Y from "yjs";
+import { toast } from "sonner";
 import Markdown from "react-markdown";
-
+import { LanguagesIcon } from "lucide-react";
+import { readStreamableValue } from "@ai-sdk/rsc";
+import { generateSummary } from "@/lib/generateActions";
+import {
+  AI_MODELS,
+  DEFAULT_AI_MODEL,
+  SUPPORTED_LANGUAGES,
+  LANGUAGE_LABELS,
+} from "@/constants";
+import type { AIModelName, SupportedLanguage } from "@/types";
+import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +23,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
 import {
   Select,
   SelectContent,
@@ -19,102 +31,95 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useState } from "react";
+// ============================================================================
+// TYPES
+// ============================================================================
 
-type Language =
-  | "english"
-  | "french"
-  | "spanish"
-  | "german"
-  | "italian"
-  | "portuguese"
-  | "chinese"
-  | "russian"
-  | "hindi"
-  | "japanese";
+interface TranslateDocumentProps {
+  doc: Y.Doc;
+}
 
-const languages: Language[] = [
-  "english",
-  "french",
-  "spanish",
-  "german",
-  "italian",
-  "portuguese",
-  "chinese",
-  "russian",
-  "hindi",
-  "japanese",
-];
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-import * as Y from "yjs";
-import { Button } from "./ui/button";
-import { LanguagesIcon } from "lucide-react";
-import { toast } from "sonner";
-import { generateSummary } from "@/lib/generateActions";
-import { readStreamableValue } from '@ai-sdk/rsc';
-import { MODELNAMES } from "@/constants/modelNames"; // Ensure this is the correct path
-
-type Props = { doc: Y.Doc };
-export default function TranslateDocument({ doc }: Props) {
+export default function TranslateDocument({ doc }: TranslateDocumentProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [language, setLanguage] = useState<string>("");
-  const [modelName, setModelName] = useState<string>("gpt-4o"); // Default model
-  const [summary, setSummary] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [language, setLanguage] = useState<SupportedLanguage | "">("");
+  const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
+  const [summary, setSummary] = useState("");
 
-  const handleSummary = async (e: React.FormEvent) => {
+  const handleTranslate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!language) return;
+
     setIsPending(true);
+    setSummary("");
+
     try {
       const documentData = doc.get("document-store").toJSON();
-
       const result = await generateSummary(documentData, language, modelName);
+
       for await (const content of readStreamableValue(result)) {
         if (content) {
           setSummary(content.trim());
         }
       }
 
-      toast.success("Translated Summary successfully");
-      setIsPending(false);
-    } catch (err) {
-      console.error("Purpose Error:", err);
-      toast.error("Failed to Translate Summary");
+      toast.success(`Summary translated to ${LANGUAGE_LABELS[language]}`);
+    } catch (error) {
+      console.error("[TranslateDocument] Error:", error);
+      toast.error("Failed to translate. Please try again.");
+    } finally {
       setIsPending(false);
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button asChild variant="outline">
-        <DialogTrigger>
-          <LanguagesIcon />
-          Translate
-        </DialogTrigger>
-      </Button>
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset state when closing
+      setLanguage("");
+      setSummary("");
+    }
+  };
 
-      <DialogContent className="flex flex-col gap-3 w-[90vw] max-w-4xl max-h-[30rem] h-[80vh] overflow-y-auto">
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <LanguagesIcon className="mr-2 h-4 w-4" />
+          Translate
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="flex flex-col gap-4 w-[90vw] max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Translate the Document</DialogTitle>
+          <DialogTitle>Translate Document</DialogTitle>
           <DialogDescription>
-            Select a Language and Model, and AI will translate a summary of the
-            document in the selected language.
+            Generate a translated summary of this document in your preferred
+            language.
           </DialogDescription>
-          <hr className="my-2" />
         </DialogHeader>
 
-        <form className="flex items-center gap-4" onSubmit={handleSummary}>
+        <form
+          className="flex flex-col sm:flex-row gap-3"
+          onSubmit={handleTranslate}
+        >
           <Select
             value={language}
-            onValueChange={(value) => setLanguage(value)}
+            onValueChange={(value) => setLanguage(value as SupportedLanguage)}
+            disabled={isPending}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Select Language" />
             </SelectTrigger>
             <SelectContent>
-              {languages.map((lang) => (
+              {SUPPORTED_LANGUAGES.map((lang) => (
                 <SelectItem key={lang} value={lang}>
-                  {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                  {LANGUAGE_LABELS[lang]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -122,13 +127,14 @@ export default function TranslateDocument({ doc }: Props) {
 
           <Select
             value={modelName}
-            onValueChange={(value) => setModelName(value)}
+            onValueChange={(value) => setModelName(value as AIModelName)}
+            disabled={isPending}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Select Model" />
             </SelectTrigger>
             <SelectContent>
-              {MODELNAMES.map((model) => (
+              {AI_MODELS.map((model) => (
                 <SelectItem key={model.value} value={model.value}>
                   {model.label}
                 </SelectItem>
@@ -142,7 +148,7 @@ export default function TranslateDocument({ doc }: Props) {
         </form>
 
         {summary && (
-          <div className="mt-4 p-5 bg-gray-100 rounded-md max-h-64 overflow-y-auto">
+          <div className="p-4 bg-gray-50 rounded-lg overflow-y-auto max-h-64 prose prose-sm max-w-none">
             <Markdown>{summary}</Markdown>
           </div>
         )}

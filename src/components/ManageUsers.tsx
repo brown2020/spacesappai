@@ -1,5 +1,11 @@
 "use client";
 
+import { useTransition } from "react";
+import { useRoom } from "@liveblocks/react/suspense";
+import { toast } from "sonner";
+import { useRoomUsers, useOwner } from "@/hooks";
+import { removeUserFromDocument } from "@/lib/documentActions";
+import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,87 +14,114 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, useTransition } from "react";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
-import useOwner from "@/lib/useOwner";
-import { useRoom } from "@liveblocks/react/suspense";
-import { useCollection } from "react-firebase-hooks/firestore";
-import { collectionGroup, query, where } from "firebase/firestore";
 
-import { removeUserFromDocument } from "@/lib/documentActions";
-import { db } from "@/firebase/firebaseConfig";
+// ============================================================================
+// USER LIST ITEM
+// ============================================================================
+
+interface UserListItemProps {
+  userId: string;
+  role: string;
+  isCurrentUser: boolean;
+  isOwner: boolean;
+  onRemove: () => void;
+  isRemoving: boolean;
+}
+
+function UserListItem({
+  userId,
+  role,
+  isCurrentUser,
+  isOwner,
+  onRemove,
+  isRemoving,
+}: UserListItemProps) {
+  const displayName = isCurrentUser ? `You (${userId})` : userId;
+  const canRemove = isOwner && !isCurrentUser;
+
+  return (
+    <div className="flex items-center justify-between py-2">
+      <p className="text-sm truncate flex-1">{displayName}</p>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="px-2 py-1 text-xs bg-gray-100 rounded-md capitalize">
+          {role}
+        </span>
+
+        {canRemove && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onRemove}
+            disabled={isRemoving}
+            aria-label={`Remove ${userId}`}
+          >
+            {isRemoving ? "..." : "×"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function ManageUsers() {
-  const { user } = useUser();
   const room = useRoom();
-  const isOwner = useOwner();
-
-  const [isOpen, setIsOpen] = useState(false);
+  const { users, currentUserEmail } = useRoomUsers(room.id);
+  const { isOwner } = useOwner();
   const [isPending, startTransition] = useTransition();
 
-  const [usersInRoom] = useCollection(
-    user && query(collectionGroup(db, "rooms"), where("roomId", "==", room.id))
-  );
-
-  const handleDelete = (userId: string) => {
+  const handleRemoveUser = (userId: string) => {
     startTransition(async () => {
-      if (!user) return;
-
-      const { success } = await removeUserFromDocument(room.id, userId);
+      const { success, error } = await removeUserFromDocument(room.id, userId);
 
       if (success) {
-        toast.success("User removed from document successfully");
+        toast.success("User removed successfully");
       } else {
-        toast.error("Failed to remove user from document");
+        toast.error(error?.message || "Failed to remove user");
       }
     });
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button asChild variant="outline">
-        <DialogTrigger>Users ({usersInRoom?.docs.length})</DialogTrigger>
-      </Button>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">Users ({users.length})</Button>
+      </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Users with Access</DialogTitle>
           <DialogDescription>
-            Below is a list of users who have access to this document.
+            Users who can view and edit this document.
           </DialogDescription>
         </DialogHeader>
 
         <hr className="my-2" />
 
-        <div className="flex flex-col space-y-2">
-          {usersInRoom?.docs.map((doc) => (
-            <div
-              key={doc.data().userId}
-              className="flex items-center justify-between"
-            >
-              <p>
-                {doc.data().userId === user?.emailAddresses[0].toString()
-                  ? `You (${doc.data().userId})`
-                  : doc.data().userId}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline">{doc.data().role}</Button>
-                {isOwner &&
-                  doc.data().userId !== user?.emailAddresses[0].toString() && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDelete(doc.data().userId)}
-                      disabled={isPending}
-                      size={"sm"}
-                    >
-                      {isPending ? "Removing..." : "X"}
-                    </Button>
-                  )}
-              </div>
+        <div className="max-h-64 overflow-y-auto">
+          {users.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-4">
+              No users found
+            </p>
+          ) : (
+            <div className="divide-y">
+              {users.map((user) => (
+                <UserListItem
+                  key={user.userId}
+                  userId={user.userId}
+                  role={user.role}
+                  isCurrentUser={user.userId === currentUserEmail}
+                  isOwner={isOwner}
+                  onRemove={() => handleRemoveUser(user.userId)}
+                  isRemoving={isPending}
+                />
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,7 +1,14 @@
-import { User } from "./types";
+import type { User } from "./index";
 
-export {};
+/**
+ * Global type declarations
+ */
 
 declare global {
+  /**
+   * Clerk JWT session claims type
+   */
   type CustomJwtSessionClaims = User;
 }
+
+export {};

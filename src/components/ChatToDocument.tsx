@@ -1,7 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import * as Y from "yjs";
-
+import { toast } from "sonner";
+import Markdown from "react-markdown";
+import { MessageCircleCode } from "lucide-react";
+import { readStreamableValue } from "@ai-sdk/rsc";
+import { generateAnswer } from "@/lib/generateActions";
+import { AI_MODELS, DEFAULT_AI_MODEL } from "@/constants";
+import type { AIModelName } from "@/types";
+import { Button } from "./ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { MessageCircleCode } from "lucide-react";
-import Markdown from "react-markdown";
-import { generateAnswer } from "@/lib/generateActions";
-import { readStreamableValue } from '@ai-sdk/rsc';
 import {
   Select,
   SelectContent,
@@ -25,72 +26,103 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MODELNAMES } from "@/constants/modelNames"; // Ensure this is the correct path
 
-type Props = { doc: Y.Doc };
-export default function ChatToDocument({ doc }: Props) {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ChatToDocumentProps {
+  doc: Y.Doc;
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export default function ChatToDocument({ doc }: ChatToDocumentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [question, setQuestion] = useState("");
-  const [modelName, setModelName] = useState<string>("gpt-4o"); // Default model
-  const [summary, setSummary] = useState("");
+  const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
+  const [answer, setAnswer] = useState("");
 
   const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!question.trim()) return;
+
     setIsPending(true);
+    setAnswer("");
+
     try {
       const documentData = doc.get("document-store").toJSON();
-
       const result = await generateAnswer(documentData, question, modelName);
+
       for await (const content of readStreamableValue(result)) {
         if (content) {
-          setSummary(content.trim());
+          setAnswer(content.trim());
         }
       }
 
-      toast.success("Answered question successfully");
-      setIsPending(false);
-    } catch (err) {
-      console.error("Purpose Error:", err);
-      toast.error("Failed to answer question");
+      toast.success("Question answered successfully");
+    } catch (error) {
+      console.error("[ChatToDocument] Error:", error);
+      toast.error("Failed to get answer. Please try again.");
+    } finally {
       setIsPending(false);
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button asChild variant="outline">
-        <DialogTrigger>
-          <MessageCircleCode className="mr-2" /> Chat to document
-        </DialogTrigger>
-      </Button>
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset state when closing
+      setQuestion("");
+      setAnswer("");
+    }
+  };
 
-      <DialogContent className="flex flex-col gap-3 w-[90vw] max-w-4xl max-h-[30rem] h-[80vh] overflow-y-auto">
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <MessageCircleCode className="mr-2 h-4 w-4" />
+          Chat
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="flex flex-col gap-4 w-[90vw] max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Ask a question to the document</DialogTitle>
+          <DialogTitle>Ask a Question</DialogTitle>
           <DialogDescription>
-            Enter the question you want to ask to the document.
+            Ask any question about this document and AI will answer based on its
+            content.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="flex items-center gap-4" onSubmit={handleAskQuestion}>
+        <form
+          className="flex flex-col sm:flex-row gap-3"
+          onSubmit={handleAskQuestion}
+        >
           <Input
             type="text"
-            placeholder="i.e. What is this about?"
-            className="w-full"
+            placeholder="What is this document about?"
+            className="flex-1"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            disabled={isPending}
           />
 
           <Select
             value={modelName}
-            onValueChange={(value) => setModelName(value)}
+            onValueChange={(value) => setModelName(value as AIModelName)}
+            disabled={isPending}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Select Model" />
             </SelectTrigger>
             <SelectContent>
-              {MODELNAMES.map((model) => (
+              {AI_MODELS.map((model) => (
                 <SelectItem key={model.value} value={model.value}>
                   {model.label}
                 </SelectItem>
@@ -98,14 +130,14 @@ export default function ChatToDocument({ doc }: Props) {
             </SelectContent>
           </Select>
 
-          <Button type="submit" disabled={!question || isPending}>
-            {isPending ? "Asking..." : "Ask"}
+          <Button type="submit" disabled={!question.trim() || isPending}>
+            {isPending ? "Thinking..." : "Ask"}
           </Button>
         </form>
 
-        {summary && (
-          <div className="mt-4 p-5 bg-gray-100 rounded-md max-h-64 overflow-y-auto">
-            <Markdown>{summary}</Markdown>
+        {answer && (
+          <div className="p-4 bg-gray-50 rounded-lg overflow-y-auto max-h-64 prose prose-sm max-w-none">
+            <Markdown>{answer}</Markdown>
           </div>
         )}
       </DialogContent>

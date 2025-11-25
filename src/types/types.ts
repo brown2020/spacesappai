@@ -1,7 +1,6 @@
-export type User = {
-  email: string;
-  image: string;
-  fullName: string;
-  firstName: string;
-  lastName: string;
-};
+/**
+ * @deprecated Import types from "@/types" instead
+ * This file is kept for backwards compatibility
+ */
+
+export type { User } from "./index";

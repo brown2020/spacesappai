@@ -1,8 +1,24 @@
 import { Liveblocks } from "@liveblocks/node";
+import { serverEnv } from "@/lib/env";
 
-const key = process.env.LIVEBLOCKS_PRIVATE_KEY;
+// ============================================================================
+// LIVEBLOCKS CLIENT
+// ============================================================================
 
-if (!key) {
-  throw new Error("LIVEBLOCKS_PRIVATE_KEY is required");
+/**
+ * Liveblocks server-side client
+ * Used for room management and authentication
+ */
+function createLiveblocksClient(): Liveblocks {
+  const secretKey = serverEnv.liveblocks.secretKey;
+
+  if (!secretKey) {
+    throw new Error(
+      "LIVEBLOCKS_PRIVATE_KEY is required. Please add it to your environment variables."
+    );
+  }
+
+  return new Liveblocks({ secret: secretKey });
 }
-export const liveblocks = new Liveblocks({ secret: key });
+
+export const liveblocks = createLiveblocksClient();

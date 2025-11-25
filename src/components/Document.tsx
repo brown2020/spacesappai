@@ -1,78 +1,106 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { FormEvent, useState } from "react";
+import { useDocumentTitle, useOwner } from "@/hooks";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { doc, updateDoc } from "firebase/firestore";
-import { useDocumentData } from "react-firebase-hooks/firestore";
 import Editor from "./Editor";
-import useOwner from "@/lib/useOwner";
 import DeleteDocument from "./DeleteDocument";
 import InviteUser from "./InviteUser";
 import ManageUsers from "./ManageUsers";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
-import { db } from "@/firebase/firebaseConfig";
 
-type Props = { id: string };
-export default function Document({ id }: Props) {
-  const [data] = useDocumentData(doc(db, "documents", id));
-  const [input, setInput] = useState("");
-  const [isUpdating, startTransition] = useTransition();
-  const isOwner = useOwner();
-  const [isEditorReady, setIsEditorReady] = useState(false);
+// ============================================================================
+// DOCUMENT HEADER
+// ============================================================================
 
-  useEffect(() => {
-    if (!data) return;
-    setInput(data.title);
-  }, [data]);
+interface DocumentHeaderProps {
+  documentId: string;
+}
 
-  const updateTitle = (e: React.FormEvent) => {
+function DocumentHeader({ documentId }: DocumentHeaderProps) {
+  const { title, setTitle, updateTitle, isUpdating } =
+    useDocumentTitle(documentId);
+  const { isOwner } = useOwner();
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-
-    if (input.trim()) {
-      startTransition(async () => {
-        await updateDoc(doc(db, "documents", id), { title: input });
-      });
-    }
+    updateTitle();
   };
 
   return (
-    <div className="flex-1 h-full bg-white p-5">
-      <div className="flex max-w-6xl mx-auto justify-between pb-5">
-        <form className="flex flex-1 gap-2" onSubmit={updateTitle}>
-          {/* update title */}
-          <Input value={input} onChange={(e) => setInput(e.target.value)} />
+    <div className="flex max-w-6xl mx-auto justify-between pb-5">
+      <form className="flex flex-1 gap-2" onSubmit={handleSubmit}>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Document title"
+          aria-label="Document title"
+        />
 
-          <Button disabled={isUpdating || !input.trim()}>
-            {isUpdating ? "Updating..." : "Update"}
-          </Button>
+        <Button disabled={isUpdating || !title.trim()} type="submit">
+          {isUpdating ? "Updating..." : "Update"}
+        </Button>
 
-          {/* If  */}
+        {isOwner && (
+          <>
+            <InviteUser />
+            <DeleteDocument />
+          </>
+        )}
+      </form>
+    </div>
+  );
+}
 
-          {isOwner && (
-            <>
-              <InviteUser />
-              <DeleteDocument />
-            </>
-          )}
+// ============================================================================
+// DOCUMENT TOOLBAR
+// ============================================================================
 
-          {/* isOwner && InviteUser, DeleteDocument */}
-        </form>
-      </div>
-      <div className="flex max-w-6xl mx-auto justify-between items-center mb-5">
-        <ManageUsers />
-        {isEditorReady && <Avatars />}
-      </div>
+interface DocumentToolbarProps {
+  showAvatars: boolean;
+}
+
+function DocumentToolbar({ showAvatars }: DocumentToolbarProps) {
+  return (
+    <div className="flex max-w-6xl mx-auto justify-between items-center mb-5">
+      <ManageUsers />
+      {showAvatars && <Avatars />}
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN DOCUMENT COMPONENT
+// ============================================================================
+
+interface DocumentProps {
+  id: string;
+}
+
+export default function Document({ id }: DocumentProps) {
+  const [isEditorReady, setIsEditorReady] = useState(false);
+
+  const handleEditorReady = () => {
+    setIsEditorReady(true);
+  };
+
+  return (
+    <article className="flex-1 h-full bg-white p-5">
+      <DocumentHeader documentId={id} />
+      <DocumentToolbar showAvatars={isEditorReady} />
+
       <hr className="pb-10" />
 
+      {/* Render editor with live cursors once ready */}
       {isEditorReady ? (
         <LiveCursorProvider>
-          <Editor onReady={() => {}} />
+          <Editor />
         </LiveCursorProvider>
       ) : (
-        <Editor onReady={() => setIsEditorReady(true)} />
+        <Editor onReady={handleEditorReady} />
       )}
-    </div>
+    </article>
   );
 }

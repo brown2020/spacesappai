@@ -1,16 +1,26 @@
 "use client";
 
 import { LiveblocksProvider } from "@liveblocks/react/suspense";
+import { UI } from "@/constants";
+import type { ChildrenProps } from "@/types";
 
-type Props = { children: React.ReactNode };
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-export default function LiveBlocksProvider({ children }: Props) {
+export default function LiveBlocksProvider({ children }: ChildrenProps) {
+  // Validate that the public key exists
   if (!process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY) {
-    throw new Error("NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY is required");
+    throw new Error(
+      "NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY is required. Please add it to your environment variables."
+    );
   }
 
   return (
-    <LiveblocksProvider throttle={16} authEndpoint={"/api/auth-endpoint"}>
+    <LiveblocksProvider
+      throttle={UI.LIVEBLOCKS_THROTTLE}
+      authEndpoint="/api/auth-endpoint"
+    >
       {children}
     </LiveblocksProvider>
   );

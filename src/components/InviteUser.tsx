@@ -1,5 +1,11 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { inviteUserToDocument } from "@/lib/documentActions";
+import { Button } from "./ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -8,61 +14,126 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, useTransition } from "react";
-import { Button } from "./ui/button";
-import { usePathname } from "next/navigation";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { inviteUserToDocument } from "@/lib/documentActions";
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract room ID from pathname
+ */
+function getRoomIdFromPath(pathname: string): string | null {
+  const segments = pathname.split("/");
+  return segments[segments.length - 1] || null;
+}
+
+/**
+ * Basic email validation
+ */
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function InviteUser() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const pathname = usePathname();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    const roomId = pathname.split("/").pop();
-    if (!roomId) return;
+    setError("");
+
+    // Validate email
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    const roomId = getRoomIdFromPath(pathname);
+    if (!roomId) {
+      setError("Unable to determine document ID");
+      return;
+    }
+
     startTransition(async () => {
-      const { success } = await inviteUserToDocument(roomId, email);
+      const { success, error: actionError } = await inviteUserToDocument(
+        roomId,
+        email.toLowerCase().trim()
+      );
 
       if (success) {
         setIsOpen(false);
         setEmail("");
-        toast.success("User added to document successfully");
+        toast.success(`Invited ${email} successfully`);
       } else {
-        toast.error("Failed to add user to room!");
+        toast.error(actionError?.message || "Failed to invite user");
       }
     });
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button asChild variant="outline">
-        <DialogTrigger>Invite</DialogTrigger>
-      </Button>
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setEmail("");
+      setError("");
+    }
+  };
 
-      <DialogContent>
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Invite</Button>
+      </DialogTrigger>
+
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite a user to collaborate!</DialogTitle>
+          <DialogTitle>Invite Collaborator</DialogTitle>
           <DialogDescription>
-            Enter the email of the user you want to invite.
+            Enter the email address of the person you want to invite to
+            collaborate on this document.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="flex gap-2" onSubmit={handleInvite}>
-          <Input
-            type="email"
-            placeholder="Email"
-            className="w-full"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button type="submit" disabled={!email || isPending}>
-            {isPending ? "Inviting..." : "Invite"}
-          </Button>
+        <form className="flex flex-col gap-4" onSubmit={handleInvite}>
+          <div className="space-y-2">
+            <Input
+              type="email"
+              placeholder="colleague@example.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
+              disabled={isPending}
+              aria-invalid={!!error}
+              aria-describedby={error ? "email-error" : undefined}
+            />
+            {error && (
+              <p id="email-error" className="text-sm text-red-500">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!email || isPending}>
+              {isPending ? "Inviting..." : "Send Invite"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,53 +1,75 @@
 "use server";
 
-import { createStreamableValue } from '@ai-sdk/rsc';
-import { ModelMessage, streamText } from "ai";
+import { createStreamableValue } from "@ai-sdk/rsc";
+import { streamText, type CoreMessage } from "ai";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth } from "@clerk/nextjs/server";
+import { AI_PROMPTS } from "@/constants";
+import type { AIModelName } from "@/types";
 
+// ============================================================================
+// AI PROVIDER CONFIGURATION
+// ============================================================================
+
+/**
+ * Fireworks AI provider for open-source models
+ */
 const fireworks = createOpenAI({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
   baseURL: "https://api.fireworks.ai/inference/v1",
 });
 
-async function getModel(modelName: string) {
-  switch (modelName) {
-    case "gpt-4o":
-      return openai("gpt-4o");
-    case "gemini-1.5-pro":
-      return google("models/gemini-1.5-pro-latest");
-    case "mistral-large":
-      return mistral("mistral-large-latest");
-    case "claude-3-5-sonnet":
-      return anthropic("claude-3-5-sonnet-20240620");
-    case "llama-v3p1-405b":
-      return fireworks("accounts/fireworks/models/llama-v3p1-405b-instruct");
+// ============================================================================
+// MODEL RESOLUTION
+// ============================================================================
 
-    default:
-      throw new Error(`Unsupported model name: ${modelName}`);
+/**
+ * Model mapping for each provider
+ */
+const MODEL_MAP = {
+  "gpt-4o": () => openai("gpt-4o"),
+  "gemini-1.5-pro": () => google("models/gemini-1.5-pro-latest"),
+  "mistral-large": () => mistral("mistral-large-latest"),
+  "claude-3-5-sonnet": () => anthropic("claude-3-5-sonnet-20240620"),
+  "llama-v3p1-405b": () =>
+    fireworks("accounts/fireworks/models/llama-v3p1-405b-instruct"),
+} as const;
+
+/**
+ * Get the AI model instance for a given model name
+ */
+function getModel(modelName: AIModelName) {
+  const modelFactory = MODEL_MAP[modelName];
+
+  if (!modelFactory) {
+    throw new Error(`Unsupported model: ${modelName}`);
   }
+
+  return modelFactory();
 }
 
-async function generateResponse(
+// ============================================================================
+// STREAMING RESPONSE HELPER
+// ============================================================================
+
+/**
+ * Generate a streaming AI response
+ */
+async function generateStreamingResponse(
   systemPrompt: string,
   userPrompt: string,
-  modelName: string
+  modelName: AIModelName
 ) {
   await auth.protect();
-  const model = await getModel(modelName);
 
-  const messages: ModelMessage[] = [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-    {
-      role: "user",
-      content: userPrompt,
-    },
+  const model = getModel(modelName);
+
+  const messages: CoreMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
   ];
 
   const result = streamText({
@@ -59,26 +81,54 @@ async function generateResponse(
   return stream.value;
 }
 
+// ============================================================================
+// PUBLIC API
+// ============================================================================
+
+/**
+ * Generate a translated summary of a document
+ *
+ * @param document - The document content to summarize
+ * @param language - The target language for the summary
+ * @param modelName - The AI model to use
+ * @returns Streamable value with the summary text
+ */
 export async function generateSummary(
   document: string,
   language: string,
-  modelName: string
+  modelName: AIModelName
 ) {
   await auth.protect();
-  const systemPrompt =
-    "You are a helpful translation assistant. Your job is to generate a summary of the provided document in the provided language. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
+
   const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
-  return generateResponse(systemPrompt, userPrompt, modelName);
+
+  return generateStreamingResponse(
+    AI_PROMPTS.TRANSLATION,
+    userPrompt,
+    modelName
+  );
 }
 
+/**
+ * Generate an answer to a question about a document
+ *
+ * @param document - The document content to reference
+ * @param question - The question to answer
+ * @param modelName - The AI model to use
+ * @returns Streamable value with the answer text
+ */
 export async function generateAnswer(
   document: string,
   question: string,
-  modelName: string
+  modelName: AIModelName
 ) {
   await auth.protect();
-  const systemPrompt =
-    "You are a helpful question and answer assistant. Your job is to generate an answer to the provided question based on the provided document. Without any introduction, provide an answer that is concise, informative, and 100 words or less.";
+
   const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
-  return generateResponse(systemPrompt, userPrompt, modelName);
+
+  return generateStreamingResponse(
+    AI_PROMPTS.QUESTION_ANSWER,
+    userPrompt,
+    modelName
+  );
 }
