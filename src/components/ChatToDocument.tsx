@@ -178,3 +178,4 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
     </Dialog>
   );
 }
+

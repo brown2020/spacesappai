@@ -32,3 +32,4 @@ export default function useOwnerLegacy(): boolean {
   const { isOwner } = useOwner();
   return isOwner;
 }
+

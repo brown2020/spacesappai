@@ -118,3 +118,4 @@ export function validateServerEnv(): void {
 export const isDev = serverEnv.nodeEnv === "development";
 export const isProd = serverEnv.nodeEnv === "production";
 export const isTest = serverEnv.nodeEnv === "test";
+

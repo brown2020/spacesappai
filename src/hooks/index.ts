@@ -9,3 +9,4 @@ export { useUserDocuments } from "./use-user-documents";
 
 // Legacy default export for backwards compatibility
 export { default as useOwnerLegacy } from "./use-owner";
+
