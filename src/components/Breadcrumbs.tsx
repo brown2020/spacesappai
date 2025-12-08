@@ -71,8 +71,8 @@ export default function Breadcrumbs() {
         </BreadcrumbItem>
 
         {/* Dynamic segments */}
-        {breadcrumbs.map((segment, index) => (
-          <Fragment key={index}>
+        {breadcrumbs.map((segment) => (
+          <Fragment key={segment.href}>
             <BreadcrumbSeparator className="text-gray-400" />
             <BreadcrumbItem>
               {segment.isLast ? (

@@ -25,10 +25,18 @@ const COLLECTIONS = {
 
 /**
  * Get user email from session claims with fallback
+ * Supports both Clerk's default claim names and custom claim names
  */
 function getUserEmail(sessionClaims: Record<string, unknown> | null): string {
-  if (typeof sessionClaims?.email === "string") {
+  // Try multiple possible claim names for email
+  if (typeof sessionClaims?.email === "string" && sessionClaims.email) {
     return sessionClaims.email;
+  }
+  if (typeof sessionClaims?.emailAddress === "string" && sessionClaims.emailAddress) {
+    return sessionClaims.emailAddress;
+  }
+  if (typeof sessionClaims?.primaryEmailAddress === "string" && sessionClaims.primaryEmailAddress) {
+    return sessionClaims.primaryEmailAddress;
   }
   return "anonymous";
 }

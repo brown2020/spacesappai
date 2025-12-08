@@ -22,20 +22,35 @@ interface ErrorResponse {
 
 /**
  * Extract user info from session claims
+ * Supports both Clerk's default claim names and custom claim names
  */
 function getUserInfo(sessionClaims: Record<string, unknown> | null) {
-  return {
-    email:
-      typeof sessionClaims?.email === "string"
-        ? sessionClaims.email
-        : "anonymous",
-    name:
-      typeof sessionClaims?.fullName === "string"
-        ? sessionClaims.fullName
-        : "Anonymous",
-    avatar:
-      typeof sessionClaims?.image === "string" ? sessionClaims.image : "",
-  };
+  // Try multiple possible claim names for email
+  const email = 
+    (typeof sessionClaims?.email === "string" && sessionClaims.email) ||
+    (typeof sessionClaims?.emailAddress === "string" && sessionClaims.emailAddress) ||
+    (typeof sessionClaims?.primaryEmailAddress === "string" && sessionClaims.primaryEmailAddress) ||
+    "anonymous";
+
+  // Try multiple possible claim names for name
+  const name = 
+    (typeof sessionClaims?.fullName === "string" && sessionClaims.fullName) ||
+    (typeof sessionClaims?.name === "string" && sessionClaims.name) ||
+    (sessionClaims?.firstName && sessionClaims?.lastName 
+      ? `${sessionClaims.firstName} ${sessionClaims.lastName}`.trim()
+      : null) ||
+    (typeof sessionClaims?.firstName === "string" && sessionClaims.firstName) ||
+    "Anonymous";
+
+  // Try multiple possible claim names for avatar
+  const avatar = 
+    (typeof sessionClaims?.image === "string" && sessionClaims.image) ||
+    (typeof sessionClaims?.imageUrl === "string" && sessionClaims.imageUrl) ||
+    (typeof sessionClaims?.avatar === "string" && sessionClaims.avatar) ||
+    (typeof sessionClaims?.profileImageUrl === "string" && sessionClaims.profileImageUrl) ||
+    "";
+
+  return { email, name, avatar };
 }
 
 /**

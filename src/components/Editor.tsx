@@ -41,6 +41,8 @@ function BlockNote({
   const onReadyRef = useRef(onReady);
   // Track if provider is being destroyed to prevent editor operations
   const isDestroyedRef = useRef(false);
+  // Track timeout for cleanup to prevent memory leaks
+  const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Store user info in refs to avoid recreating editor when they change
   // Initialize with current values to avoid stale closure on first render
@@ -89,17 +91,22 @@ function BlockNote({
     if (!hasSignaledReadyRef.current && onReadyRef.current) {
       hasSignaledReadyRef.current = true;
       // Use setTimeout to avoid calling during render
-      setTimeout(() => {
+      readyTimeoutRef.current = setTimeout(() => {
         // Only signal if not destroyed
         if (!isDestroyedRef.current) {
           onReadyRef.current?.();
         }
+        readyTimeoutRef.current = null;
       }, 0);
     }
 
-    // Cleanup: mark as destroyed and clear editor reference
+    // Cleanup: mark as destroyed, clear timeout, and clear editor reference
     return () => {
       isDestroyedRef.current = true;
+      if (readyTimeoutRef.current) {
+        clearTimeout(readyTimeoutRef.current);
+        readyTimeoutRef.current = null;
+      }
       setEditor(null);
       // Note: BlockNoteEditor doesn't have a destroy method
       // The collaboration provider cleanup is handled in parent

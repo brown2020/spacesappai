@@ -8,7 +8,7 @@ import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth } from "@clerk/nextjs/server";
 import { AI_PROMPTS } from "@/constants";
-import type { AIModelName } from "@/types";
+import type { AIModelName, ActionResponse, ActionErrorCode } from "@/types";
 
 // ============================================================================
 // CONSTANTS
@@ -22,23 +22,43 @@ import type { AIModelName } from "@/types";
 const MAX_DOCUMENT_LENGTH = 50000;
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Create an error response
+ */
+function errorResponse<T = undefined>(
+  code: ActionErrorCode,
+  message: string
+): ActionResponse<T> {
+  return {
+    success: false,
+    error: { code, message },
+  };
+}
+
+// ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
 
 /**
  * Validate document for AI processing
- * @throws Error if document is invalid
+ * @returns ActionResponse with error if invalid, null if valid
  */
-function validateDocument(document: string): void {
+function validateDocument(document: string): ActionResponse | null {
   if (!document || typeof document !== "string") {
-    throw new Error("Document content is required");
+    return errorResponse("VALIDATION_ERROR", "Document content is required");
   }
   
   if (document.length > MAX_DOCUMENT_LENGTH) {
-    throw new Error(
+    return errorResponse(
+      "VALIDATION_ERROR",
       `Document is too large for AI processing. Maximum ${MAX_DOCUMENT_LENGTH.toLocaleString()} characters allowed, but received ${document.length.toLocaleString()} characters.`
     );
   }
+  
+  return null; // Valid
 }
 
 // ============================================================================
@@ -123,26 +143,36 @@ async function generateStreamingResponse(
  * @param document - The document content to summarize
  * @param language - The target language for the summary
  * @param modelName - The AI model to use
- * @returns Streamable value with the summary text
- * @throws Error if document is too large or invalid
+ * @returns Streamable value with the summary text, or ActionResponse with error
  */
 export async function generateSummary(
   document: string,
   language: string,
   modelName: AIModelName
-) {
-  await auth.protect();
+): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
+  try {
+    await auth.protect();
 
-  // Validate document size and content
-  validateDocument(document);
+    // Validate document size and content
+    const validationError = validateDocument(document);
+    if (validationError) {
+      return validationError;
+    }
 
-  if (!language || typeof language !== "string") {
-    throw new Error("Language is required");
+    if (!language || typeof language !== "string") {
+      return errorResponse("VALIDATION_ERROR", "Language is required");
+    }
+
+    const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
+
+    return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
+  } catch (error) {
+    console.error("[generateSummary] Error:", error);
+    return errorResponse(
+      "INTERNAL_ERROR",
+      "Failed to generate summary. Please try again."
+    );
   }
-
-  const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
-
-  return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
 }
 
 /**
@@ -151,28 +181,38 @@ export async function generateSummary(
  * @param document - The document content to reference
  * @param question - The question to answer
  * @param modelName - The AI model to use
- * @returns Streamable value with the answer text
- * @throws Error if document is too large or invalid
+ * @returns Streamable value with the answer text, or ActionResponse with error
  */
 export async function generateAnswer(
   document: string,
   question: string,
   modelName: AIModelName
-) {
-  await auth.protect();
+): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
+  try {
+    await auth.protect();
 
-  // Validate document size and content
-  validateDocument(document);
+    // Validate document size and content
+    const validationError = validateDocument(document);
+    if (validationError) {
+      return validationError;
+    }
 
-  if (!question || typeof question !== "string" || !question.trim()) {
-    throw new Error("Question is required");
+    if (!question || typeof question !== "string" || !question.trim()) {
+      return errorResponse("VALIDATION_ERROR", "Question is required");
+    }
+
+    const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
+
+    return generateStreamingResponse(
+      AI_PROMPTS.QUESTION_ANSWER,
+      userPrompt,
+      modelName
+    );
+  } catch (error) {
+    console.error("[generateAnswer] Error:", error);
+    return errorResponse(
+      "INTERNAL_ERROR",
+      "Failed to generate answer. Please try again."
+    );
   }
-
-  const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
-
-  return generateStreamingResponse(
-    AI_PROMPTS.QUESTION_ANSWER,
-    userPrompt,
-    modelName
-  );
 }

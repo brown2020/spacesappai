@@ -6,17 +6,11 @@ import { NextResponse } from "next/server";
 // ============================================================================
 
 /**
- * Public routes - accessible without authentication
- */
-const publicRoutes = ["/", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)"];
-
-/**
  * Protected routes - require authentication
  */
 const protectedRoutes = ["/doc(.*)", "/dashboard(.*)", "/settings(.*)"];
 
-// Create route matchers
-const isPublicRoute = createRouteMatcher(publicRoutes);
+// Create route matcher for protected routes
 const isProtectedRoute = createRouteMatcher(protectedRoutes);
 
 // ============================================================================

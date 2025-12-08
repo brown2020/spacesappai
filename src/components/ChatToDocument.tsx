@@ -67,6 +67,13 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
 
     if (!question.trim()) return;
 
+    // Get document data and validate it's not empty
+    const documentData = doc.get("document-store").toJSON();
+    if (!documentData || (typeof documentData === "string" && !documentData.trim())) {
+      toast.error("Document is empty. Add some content before asking questions.");
+      return;
+    }
+
     // Abort any previous request
     abortControllerRef.current?.abort();
     
@@ -81,12 +88,25 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
     setAnswer("");
 
     try {
-      const documentData = doc.get("document-store").toJSON();
       // Note: AbortSignal can't be passed to server actions, so cancellation
       // is handled client-side by checking abortController.signal.aborted
-      const result = await generateAnswer(documentData, question, modelName);
+      const result = await generateAnswer(
+        typeof documentData === "string" ? documentData : JSON.stringify(documentData),
+        question,
+        modelName
+      );
 
-      for await (const content of readStreamableValue(result)) {
+      // Check if result is an error response (ActionResponse has 'success' property)
+      if (result && typeof result === "object" && "success" in result) {
+        const errorResponse = result as { success: boolean; error?: { message: string } };
+        if (!errorResponse.success) {
+          toast.error(errorResponse.error?.message || "Failed to get answer. Please try again.");
+          return;
+        }
+      }
+
+      // At this point, result is a StreamableValue
+      for await (const content of readStreamableValue(result as Parameters<typeof readStreamableValue>[0])) {
         // Check if this request is still current, component is mounted, and not aborted
         if (
           !isMountedRef.current || 
@@ -96,7 +116,7 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
           break;
         }
 
-        if (content) {
+        if (content && typeof content === "string") {
           setAnswer(content.trim());
         }
       }
