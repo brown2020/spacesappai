@@ -52,15 +52,13 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
 
   // Track if component is still mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
-  // Track current request to allow cancellation
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // Track current request ID to allow cancellation of outdated requests
+  const currentRequestIdRef = useRef(0);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // Cancel any pending request on unmount
-      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -69,9 +67,8 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
 
     if (!language) return;
 
-    // Cancel any previous request
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
+    // Increment request ID to invalidate any pending requests
+    const requestId = ++currentRequestIdRef.current;
 
     setIsPending(true);
     setSummary("");
@@ -81,28 +78,27 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
       const result = await generateSummary(documentData, language, modelName);
 
       for await (const content of readStreamableValue(result)) {
-        // Check if component is still mounted before updating state
-        if (!isMountedRef.current) break;
+        // Check if this request is still current and component is mounted
+        if (!isMountedRef.current || requestId !== currentRequestIdRef.current) {
+          break;
+        }
 
         if (content) {
           setSummary(content.trim());
         }
       }
 
-      // Only show toast if still mounted
-      if (isMountedRef.current) {
+      // Only show toast if still mounted and request is current
+      if (isMountedRef.current && requestId === currentRequestIdRef.current) {
         toast.success(`Summary translated to ${LANGUAGE_LABELS[language]}`);
       }
     } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === "AbortError") return;
-
       console.error("[TranslateDocument] Error:", error);
-      if (isMountedRef.current) {
+      if (isMountedRef.current && requestId === currentRequestIdRef.current) {
         toast.error("Failed to translate. Please try again.");
       }
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && requestId === currentRequestIdRef.current) {
         setIsPending(false);
       }
     }
@@ -111,8 +107,8 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      // Cancel any pending request when closing
-      abortControllerRef.current?.abort();
+      // Invalidate any pending request when closing
+      currentRequestIdRef.current++;
       // Reset state when closing
       setLanguage("");
       setSummary("");

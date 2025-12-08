@@ -11,6 +11,37 @@ import { AI_PROMPTS } from "@/constants";
 import type { AIModelName } from "@/types";
 
 // ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/**
+ * Maximum document length in characters for AI processing
+ * This prevents excessive token usage and API timeouts
+ * ~50,000 characters is roughly 12,500 tokens (at 4 chars/token avg)
+ */
+const MAX_DOCUMENT_LENGTH = 50000;
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+/**
+ * Validate document for AI processing
+ * @throws Error if document is invalid
+ */
+function validateDocument(document: string): void {
+  if (!document || typeof document !== "string") {
+    throw new Error("Document content is required");
+  }
+  
+  if (document.length > MAX_DOCUMENT_LENGTH) {
+    throw new Error(
+      `Document is too large for AI processing. Maximum ${MAX_DOCUMENT_LENGTH.toLocaleString()} characters allowed, but received ${document.length.toLocaleString()} characters.`
+    );
+  }
+}
+
+// ============================================================================
 // AI PROVIDER CONFIGURATION
 // ============================================================================
 
@@ -92,6 +123,7 @@ async function generateStreamingResponse(
  * @param language - The target language for the summary
  * @param modelName - The AI model to use
  * @returns Streamable value with the summary text
+ * @throws Error if document is too large or invalid
  */
 export async function generateSummary(
   document: string,
@@ -99,6 +131,13 @@ export async function generateSummary(
   modelName: AIModelName
 ) {
   await auth.protect();
+  
+  // Validate document size and content
+  validateDocument(document);
+  
+  if (!language || typeof language !== "string") {
+    throw new Error("Language is required");
+  }
 
   const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
 
@@ -116,6 +155,7 @@ export async function generateSummary(
  * @param question - The question to answer
  * @param modelName - The AI model to use
  * @returns Streamable value with the answer text
+ * @throws Error if document is too large or invalid
  */
 export async function generateAnswer(
   document: string,
@@ -123,6 +163,13 @@ export async function generateAnswer(
   modelName: AIModelName
 ) {
   await auth.protect();
+  
+  // Validate document size and content
+  validateDocument(document);
+  
+  if (!question || typeof question !== "string" || !question.trim()) {
+    throw new Error("Question is required");
+  }
 
   const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
 

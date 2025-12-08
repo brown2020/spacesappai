@@ -76,6 +76,7 @@ function SidebarMenuContent() {
 function MobileSidebar() {
   // Prevent hydration mismatch from Radix UI generating different IDs
   const [isMounted, setIsMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -94,7 +95,7 @@ function MobileSidebar() {
   }
 
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <button
           className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
@@ -108,7 +109,8 @@ function MobileSidebar() {
           <SheetTitle>Menu</SheetTitle>
         </SheetHeader>
         <div className="mt-4">
-          <SidebarMenuContent />
+          {/* Only render content (and trigger data fetch) when sheet is open */}
+          {isOpen && <SidebarMenuContent />}
         </div>
       </SheetContent>
     </Sheet>

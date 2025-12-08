@@ -10,6 +10,7 @@ import InviteUser from "./InviteUser";
 import ManageUsers from "./ManageUsers";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
+import { DocumentErrorBoundary } from "./ErrorBoundary";
 
 // ============================================================================
 // DOCUMENT HEADER
@@ -95,12 +96,15 @@ export default function Document({ id }: DocumentProps) {
       <hr className="pb-10" />
 
       {/* 
-        FIX: Always render Editor inside LiveCursorProvider to prevent re-mounting
+        Wrap editor in error boundary to prevent crashes from breaking the whole app
+        Always render Editor inside LiveCursorProvider to prevent re-mounting
         The onReady callback is stable so it won't cause unnecessary re-renders
       */}
-      <LiveCursorProvider>
-        <Editor onReady={handleEditorReady} />
-      </LiveCursorProvider>
+      <DocumentErrorBoundary>
+        <LiveCursorProvider>
+          <Editor onReady={handleEditorReady} />
+        </LiveCursorProvider>
+      </DocumentErrorBoundary>
     </article>
   );
 }

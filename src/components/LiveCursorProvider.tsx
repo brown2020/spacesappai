@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useMyPresence, useOthers } from "@liveblocks/react/suspense";
+import { AnimatePresence } from "framer-motion";
 import FollowPointer from "./FollowPointer";
 import type { ChildrenProps } from "@/types";
 
@@ -29,22 +30,24 @@ export default function LiveCursorProvider({ children }: ChildrenProps) {
     updateMyPresence({ cursor: null });
   }, [updateMyPresence]);
 
-  // Filter to only users with active cursors
+  // Filter to only users with active cursors (handles both null and undefined)
   const usersWithCursors = others.filter(
-    (other) => other.presence?.cursor !== null
+    (other) => other.presence?.cursor != null
   );
 
   return (
     <div onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}>
-      {/* Render other users' cursors */}
-      {usersWithCursors.map(({ connectionId, presence, info }) => (
-        <FollowPointer
-          key={connectionId}
-          info={info}
-          x={presence.cursor?.x ?? 0}
-          y={presence.cursor?.y ?? 0}
-        />
-      ))}
+      {/* Render other users' cursors with exit animations */}
+      <AnimatePresence>
+        {usersWithCursors.map(({ connectionId, presence, info }) => (
+          <FollowPointer
+            key={connectionId}
+            info={info}
+            x={presence.cursor?.x ?? 0}
+            y={presence.cursor?.y ?? 0}
+          />
+        ))}
+      </AnimatePresence>
 
       {children}
     </div>

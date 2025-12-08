@@ -130,6 +130,7 @@ export async function createNewDocument(): Promise<
 /**
  * Delete a document and all associated room entries
  * Only the owner can delete a document
+ * Uses batch operations for atomicity
  */
 export async function deleteDocument(
   roomId: string
@@ -147,23 +148,27 @@ export async function deleteDocument(
       );
     }
 
-    // Delete the document
-    await adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId).delete();
-
-    // Find and delete all room entries for this document
+    // Find all room entries for this document BEFORE deleting anything
     const roomsQuery = await adminDb
       .collectionGroup(COLLECTIONS.ROOMS)
       .where("roomId", "==", roomId)
       .get();
 
-    // Batch delete all room entries
+    // Use batch to delete document AND all room entries atomically
     const batch = createBatch();
+    
+    // Add document deletion to batch
+    batch.delete(adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId));
+    
+    // Add all room entry deletions to batch
     roomsQuery.docs.forEach((doc: QueryDocumentSnapshot) => {
       batch.delete(doc.ref);
     });
+    
+    // Commit all deletions atomically
     await batch.commit();
 
-    // Delete the Liveblocks room
+    // Delete the Liveblocks room (external service, best-effort)
     try {
       await liveblocks.deleteRoom(roomId);
     } catch (liveblocksError) {

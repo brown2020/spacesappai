@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { inviteUserToDocument } from "@/lib/documentActions";
+import { getRoomIdFromPath } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,14 +19,6 @@ import {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Extract room ID from pathname
- */
-function getRoomIdFromPath(pathname: string): string | null {
-  const segments = pathname.split("/");
-  return segments[segments.length - 1] || null;
-}
 
 /**
  * Basic email validation

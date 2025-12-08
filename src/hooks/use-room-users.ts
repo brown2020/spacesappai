@@ -35,7 +35,7 @@ export function useRoomUsers(roomId: string): UseRoomUsersReturn {
     })) as RoomDocument[];
   }, [snapshot]);
 
-  const currentUserEmail = user?.emailAddresses[0]?.toString();
+  const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
 
   return {
     users,

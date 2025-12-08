@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
@@ -23,22 +23,25 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     doc(db, COLLECTIONS.DOCUMENTS, documentId)
   );
   const [title, setTitle] = useState("");
-  const [isUpdating, startTransition] = useTransition();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Track if user has modified the input (prevents overwriting user input)
   const hasUserEditedRef = useRef(false);
   // Track initial load to set title only once
   const hasInitializedRef = useRef(false);
+  // Track if an update is in flight (prevents race conditions)
+  const updateInFlightRef = useRef(false);
 
   // Sync title with Firestore data only on initial load
   // or when the remote title changes AND user hasn't edited
   useEffect(() => {
     if (data?.title) {
       // Only set title on first load OR if user hasn't made local changes
+      // AND no update is currently in flight
       if (!hasInitializedRef.current) {
         setTitle(data.title);
         hasInitializedRef.current = true;
-      } else if (!hasUserEditedRef.current) {
+      } else if (!hasUserEditedRef.current && !updateInFlightRef.current) {
         // Remote update came in and user hasn't edited locally
         setTitle(data.title);
       }
@@ -49,6 +52,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
   useEffect(() => {
     hasInitializedRef.current = false;
     hasUserEditedRef.current = false;
+    updateInFlightRef.current = false;
   }, [documentId]);
 
   // Wrapper for setTitle that tracks user edits
@@ -59,17 +63,30 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
 
   const updateTitle = useCallback(async () => {
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
+    if (!trimmedTitle || isUpdating) return;
 
-    startTransition(async () => {
+    setIsUpdating(true);
+    updateInFlightRef.current = true;
+    
+    try {
       await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, documentId), {
         title: trimmedTitle,
         updatedAt: new Date(),
       });
       // After successful update, allow remote updates again
       hasUserEditedRef.current = false;
-    });
-  }, [documentId, title]);
+    } catch (err) {
+      // Re-throw so caller can handle if needed
+      throw err;
+    } finally {
+      setIsUpdating(false);
+      // Delay resetting the in-flight flag to allow Firestore real-time 
+      // listener to catch up with our update, preventing stale data flash
+      setTimeout(() => {
+        updateInFlightRef.current = false;
+      }, 500);
+    }
+  }, [documentId, title, isUpdating]);
 
   return {
     title,

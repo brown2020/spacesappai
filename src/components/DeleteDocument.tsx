@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deleteDocument } from "@/lib/documentActions";
+import { getRoomIdFromPath } from "@/lib/utils";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -15,18 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Extract room ID from pathname
- */
-function getRoomIdFromPath(pathname: string): string | null {
-  const segments = pathname.split("/");
-  return segments[segments.length - 1] || null;
-}
 
 // ============================================================================
 // MAIN COMPONENT

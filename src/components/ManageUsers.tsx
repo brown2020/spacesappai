@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
 import { toast } from "sonner";
 import { useRoomUsers, useOwner } from "@/hooks";
@@ -72,16 +72,37 @@ export default function ManageUsers() {
   const room = useRoom();
   const { users, currentUserEmail } = useRoomUsers(room.id);
   const { isOwner } = useOwner();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  // Track which specific user is being removed
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleRemoveUser = (userId: string) => {
+    setRemovingUserId(userId);
     startTransition(async () => {
-      const { success, error } = await removeUserFromDocument(room.id, userId);
+      try {
+        const { success, error } = await removeUserFromDocument(room.id, userId);
 
-      if (success) {
-        toast.success("User removed successfully");
-      } else {
-        toast.error(error?.message || "Failed to remove user");
+        if (isMountedRef.current) {
+          if (success) {
+            toast.success("User removed successfully");
+          } else {
+            toast.error(error?.message || "Failed to remove user");
+          }
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setRemovingUserId(null);
+        }
       }
     });
   };
@@ -117,7 +138,7 @@ export default function ManageUsers() {
                   isCurrentUser={user.userId === currentUserEmail}
                   isOwner={isOwner}
                   onRemove={() => handleRemoveUser(user.userId)}
-                  isRemoving={isPending}
+                  isRemoving={removingUserId === user.userId}
                 />
               ))}
             </div>

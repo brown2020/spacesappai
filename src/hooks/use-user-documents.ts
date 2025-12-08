@@ -20,7 +20,7 @@ interface UseUserDocumentsReturn {
  */
 export function useUserDocuments(): UseUserDocumentsReturn {
   const { user } = useUser();
-  const userEmail = user?.emailAddresses[0]?.toString();
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
 
   const [snapshot, isLoading, error] = useCollection(
     userEmail

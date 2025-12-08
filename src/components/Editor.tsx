@@ -39,21 +39,34 @@ function BlockNote({
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const hasSignaledReadyRef = useRef(false);
   const onReadyRef = useRef(onReady);
+  
+  // Store user info in refs to avoid recreating editor when they change
+  const userNameRef = useRef(userName);
+  const userEmailRef = useRef(userEmail);
 
-  // Keep onReady ref updated to avoid stale closures
+  // Keep refs updated
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
-
+  
   useEffect(() => {
-    // Create editor instance
+    userNameRef.current = userName;
+    userEmailRef.current = userEmail;
+  }, [userName, userEmail]);
+
+  // Create editor only when doc/provider change (not on user info changes)
+  useEffect(() => {
+    // Reset the signal flag when doc/provider change so we can signal again
+    hasSignaledReadyRef.current = false;
+
+    // Create editor instance with current user info from refs
     const createdEditor = BlockNoteEditor.create({
       collaboration: {
         provider,
         fragment: doc.getXmlFragment("document-store"),
         user: {
-          name: userName || "Anonymous",
-          color: stringToColor(userEmail || "anonymous"),
+          name: userNameRef.current || "Anonymous",
+          color: stringToColor(userEmailRef.current || "anonymous"),
         },
       },
     });
@@ -73,7 +86,7 @@ function BlockNote({
       // Note: BlockNoteEditor doesn't have a destroy method
       // The collaboration provider cleanup is handled in parent
     };
-  }, [doc, provider, userName, userEmail]);
+  }, [doc, provider]); // Only depend on doc and provider
 
   if (!editor) return null;
 
