@@ -177,10 +177,3 @@ export interface UserPresence {
   cursor: CursorPosition | null;
 }
 
-// ============================================================================
-// RE-EXPORTS
-// ============================================================================
-
-export type { User as ClerkUser } from "./types";
-
-

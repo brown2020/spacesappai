@@ -2,67 +2,11 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { adminDb } from "@/firebase/firebaseAdmin";
+import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
-import type {
-  ActionResponse,
-  ActionErrorCode,
-  CreateDocumentResponse,
-} from "@/types";
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const COLLECTIONS = {
-  DOCUMENTS: "documents",
-  USERS: "users",
-  ROOMS: "rooms",
-} as const;
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Get user email from session claims with fallback
- * Supports both Clerk's default claim names and custom claim names
- */
-function getUserEmail(sessionClaims: Record<string, unknown> | null): string {
-  // Try multiple possible claim names for email
-  if (typeof sessionClaims?.email === "string" && sessionClaims.email) {
-    return sessionClaims.email;
-  }
-  if (typeof sessionClaims?.emailAddress === "string" && sessionClaims.emailAddress) {
-    return sessionClaims.emailAddress;
-  }
-  if (typeof sessionClaims?.primaryEmailAddress === "string" && sessionClaims.primaryEmailAddress) {
-    return sessionClaims.primaryEmailAddress;
-  }
-  return "anonymous";
-}
-
-/**
- * Create an error response
- */
-function errorResponse<T = undefined>(
-  code: ActionErrorCode,
-  message: string
-): ActionResponse<T> {
-  return {
-    success: false,
-    error: { code, message },
-  };
-}
-
-/**
- * Create a success response
- */
-function successResponse<T>(data?: T): ActionResponse<T> {
-  return {
-    success: true,
-    data,
-  };
-}
+import { getUserEmail } from "@/lib/auth-utils";
+import { errorResponse, successResponse } from "@/lib/action-utils";
+import type { ActionResponse, CreateDocumentResponse } from "@/types";
 
 // ============================================================================
 // DOCUMENT ACTIONS

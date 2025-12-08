@@ -8,7 +8,8 @@ import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth } from "@clerk/nextjs/server";
 import { AI_PROMPTS } from "@/constants";
-import type { AIModelName, ActionResponse, ActionErrorCode } from "@/types";
+import { errorResponse } from "@/lib/action-utils";
+import type { AIModelName, ActionResponse } from "@/types";
 
 // ============================================================================
 // CONSTANTS
@@ -16,49 +17,62 @@ import type { AIModelName, ActionResponse, ActionErrorCode } from "@/types";
 
 /**
  * Maximum document length in characters for AI processing
- * This prevents excessive token usage and API timeouts
- * ~50,000 characters is roughly 12,500 tokens (at 4 chars/token avg)
+ * Modern models support large contexts:
+ * - GPT-4o: 128K tokens (~512K chars)
+ * - Claude 3.5 Sonnet: 200K tokens (~800K chars)
+ * - Gemini 1.5 Pro: 1M tokens
+ * 
+ * We set a reasonable limit of 400K chars (~100K tokens) to balance
+ * capability with cost and response time.
  */
-const MAX_DOCUMENT_LENGTH = 50000;
+const MAX_DOCUMENT_LENGTH = 400000;
+
+/**
+ * For documents exceeding the limit, we truncate intelligently
+ * keeping the beginning and end of the document
+ */
+const TRUNCATION_HEAD_RATIO = 0.7; // Keep 70% from the beginning
+const TRUNCATION_TAIL_RATIO = 0.25; // Keep 25% from the end (5% reserved for truncation message)
 
 // ============================================================================
-// HELPER FUNCTIONS
+// DOCUMENT PROCESSING HELPERS
 // ============================================================================
 
 /**
- * Create an error response
+ * Truncate a document intelligently, keeping the beginning and end
+ * with a clear message about what was truncated
  */
-function errorResponse<T = undefined>(
-  code: ActionErrorCode,
-  message: string
-): ActionResponse<T> {
-  return {
-    success: false,
-    error: { code, message },
-  };
+function truncateDocument(document: string, maxLength: number): string {
+  if (document.length <= maxLength) {
+    return document;
+  }
+
+  // Calculate how much to keep from head and tail
+  const headLength = Math.floor(maxLength * TRUNCATION_HEAD_RATIO);
+  const tailLength = Math.floor(maxLength * TRUNCATION_TAIL_RATIO);
+  
+  const head = document.slice(0, headLength);
+  const tail = document.slice(-tailLength);
+  
+  const truncatedChars = document.length - headLength - tailLength;
+  const truncationMessage = `\n\n[... ${truncatedChars.toLocaleString()} characters truncated for AI processing ...]\n\n`;
+  
+  return head + truncationMessage + tail;
 }
 
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
 /**
- * Validate document for AI processing
- * @returns ActionResponse with error if invalid, null if valid
+ * Validate and prepare document for AI processing
+ * Returns the processed document or an error response
  */
-function validateDocument(document: string): ActionResponse | null {
+function prepareDocument(document: string): { document: string } | ActionResponse {
   if (!document || typeof document !== "string") {
     return errorResponse("VALIDATION_ERROR", "Document content is required");
   }
   
-  if (document.length > MAX_DOCUMENT_LENGTH) {
-    return errorResponse(
-      "VALIDATION_ERROR",
-      `Document is too large for AI processing. Maximum ${MAX_DOCUMENT_LENGTH.toLocaleString()} characters allowed, but received ${document.length.toLocaleString()} characters.`
-    );
-  }
+  // Truncate if necessary (rather than rejecting)
+  const processedDocument = truncateDocument(document, MAX_DOCUMENT_LENGTH);
   
-  return null; // Valid
+  return { document: processedDocument };
 }
 
 // ============================================================================
@@ -153,17 +167,17 @@ export async function generateSummary(
   try {
     await auth.protect();
 
-    // Validate document size and content
-    const validationError = validateDocument(document);
-    if (validationError) {
-      return validationError;
+    // Validate and prepare document (truncates if too large)
+    const prepared = prepareDocument(document);
+    if ("success" in prepared) {
+      return prepared; // Return error response
     }
 
     if (!language || typeof language !== "string") {
       return errorResponse("VALIDATION_ERROR", "Language is required");
     }
 
-    const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
+    const userPrompt = `Provided document:\n${prepared.document}\n\nProvided language:\n${language}`;
 
     return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
   } catch (error) {
@@ -191,17 +205,17 @@ export async function generateAnswer(
   try {
     await auth.protect();
 
-    // Validate document size and content
-    const validationError = validateDocument(document);
-    if (validationError) {
-      return validationError;
+    // Validate and prepare document (truncates if too large)
+    const prepared = prepareDocument(document);
+    if ("success" in prepared) {
+      return prepared; // Return error response
     }
 
     if (!question || typeof question !== "string" || !question.trim()) {
       return errorResponse("VALIDATION_ERROR", "Question is required");
     }
 
-    const userPrompt = `Provided document:\n${document}\n\nProvided question:\n${question}`;
+    const userPrompt = `Provided document:\n${prepared.document}\n\nProvided question:\n${question}`;
 
     return generateStreamingResponse(
       AI_PROMPTS.QUESTION_ANSWER,

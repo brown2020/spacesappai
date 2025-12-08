@@ -9,6 +9,7 @@ import { BlockNoteEditor } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
+import { useLatest } from "@/hooks";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
 import stringToColor from "@/lib/stringToColor";
@@ -38,29 +39,15 @@ function BlockNote({
 }: BlockNoteProps) {
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const hasSignaledReadyRef = useRef(false);
-  const onReadyRef = useRef(onReady);
   // Track if provider is being destroyed to prevent editor operations
   const isDestroyedRef = useRef(false);
   // Track timeout for cleanup to prevent memory leaks
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Store user info in refs to avoid recreating editor when they change
-  // Initialize with current values to avoid stale closure on first render
-  const userNameRef = useRef(userName);
-  const userEmailRef = useRef(userEmail);
-
-  // Keep refs updated via useLayoutEffect to ensure they're current
-  // before the editor creation effect runs
-  useEffect(() => {
-    onReadyRef.current = onReady;
-  }, [onReady]);
-
-  // Update user info refs - using useLayoutEffect ensures these run
-  // synchronously before the editor creation effect
-  useEffect(() => {
-    userNameRef.current = userName;
-    userEmailRef.current = userEmail;
-  }, [userName, userEmail]);
+  // Use useLatest to keep refs updated without causing re-renders or effect re-runs
+  const onReadyRef = useLatest(onReady);
+  const userNameRef = useLatest(userName);
+  const userEmailRef = useLatest(userEmail);
 
   // Create editor only when doc/provider change (not on user info changes)
   // Note: We include userName and userEmail to ensure editor has latest values

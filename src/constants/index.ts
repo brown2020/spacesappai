@@ -87,13 +87,3 @@ export const UI = {
   TOAST_DURATION: 3000,
 } as const;
 
-// ============================================================================
-// LEGACY EXPORTS (for backwards compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use AI_MODELS instead
- */
-export const MODELNAMES = AI_MODELS;
-
-

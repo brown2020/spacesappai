@@ -48,11 +48,3 @@ export function useOwner(): UseOwnerReturn {
   };
 }
 
-// Default export for backwards compatibility
-export default function useOwnerLegacy(): boolean {
-  const { isOwner } = useOwner();
-  return isOwner;
-}
-
-
-

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { MenuIcon } from "lucide-react";
 import { useUserDocuments } from "@/hooks";
 import NewDocumentButton from "./NewDocumentButton";
 import SidebarOption from "./SidebarOption";
+import ClientOnly from "./ClientOnly";
 import {
   Sheet,
   SheetContent,
@@ -74,29 +75,26 @@ function SidebarMenuContent() {
 }
 
 // ============================================================================
+// MENU BUTTON PLACEHOLDER
+// ============================================================================
+
+function MenuButtonPlaceholder() {
+  return (
+    <button
+      className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
+      aria-label="Open menu"
+    >
+      <MenuIcon size={24} />
+    </button>
+  );
+}
+
+// ============================================================================
 // MOBILE SIDEBAR
 // ============================================================================
 
 function MobileSidebar() {
-  // Prevent hydration mismatch from Radix UI generating different IDs
-  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Show a simple button placeholder during SSR to prevent layout shift
-  if (!isMounted) {
-    return (
-      <button
-        className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
-        aria-label="Open menu"
-      >
-        <MenuIcon size={24} />
-      </button>
-    );
-  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -128,9 +126,11 @@ function MobileSidebar() {
 export default function Sidebar() {
   return (
     <aside className="p-2 md:p-5 bg-gray-200 relative shrink-0">
-      {/* Mobile: Sheet drawer */}
+      {/* Mobile: Sheet drawer - wrapped in ClientOnly to prevent hydration mismatch */}
       <div className="md:hidden">
-        <MobileSidebar />
+        <ClientOnly fallback={<MenuButtonPlaceholder />}>
+          <MobileSidebar />
+        </ClientOnly>
       </div>
 
       {/* Desktop: Always visible sidebar */}

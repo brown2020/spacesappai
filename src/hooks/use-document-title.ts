@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
+import { useIsMounted } from "./use-is-mounted";
 
 interface UseDocumentTitleReturn {
   title: string;
@@ -34,15 +35,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
   // Track timeout for cleanup to prevent memory leaks
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Track if component is mounted to prevent state updates after unmount
-  const isMountedRef = useRef(true);
-
-  // Track mounted state
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const isMountedRef = useIsMounted();
 
   // Sync title with Firestore data only on initial load
   // or when the remote title changes AND user hasn't edited
@@ -114,7 +107,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [documentId, title, isUpdating]);
+  }, [documentId, title, isUpdating, isMountedRef]);
 
   return {
     title,

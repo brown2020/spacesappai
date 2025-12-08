@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
 import { toast } from "sonner";
-import { useRoomUsers, useOwner } from "@/hooks";
+import { useRoomUsers, useOwner, useIsMounted } from "@/hooks";
 import { removeUserFromDocument } from "@/lib/documentActions";
 import { Button } from "./ui/button";
 import {
@@ -75,16 +75,8 @@ export default function ManageUsers() {
   const [, startTransition] = useTransition();
   // Track which specific user is being removed
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
-
   // Track if component is mounted to prevent state updates after unmount
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const isMountedRef = useIsMounted();
 
   const handleRemoveUser = (userId: string) => {
     setRemovingUserId(userId);

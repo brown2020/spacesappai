@@ -6,6 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Validate email format
+ * Basic validation that checks for presence of @ and domain
+ *
+ * @param email - Email string to validate
+ * @returns true if email format is valid
+ */
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
  * Validate that a string is a valid Firestore document ID
  * Firestore IDs must:
  * - Be between 1 and 1500 bytes (we use a simpler character limit)

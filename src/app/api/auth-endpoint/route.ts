@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { adminDb } from "@/firebase/firebaseAdmin";
+import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
+import { getUserInfo } from "@/lib/auth-utils";
 
 // ============================================================================
 // TYPES
@@ -21,39 +23,6 @@ interface ErrorResponse {
 // ============================================================================
 
 /**
- * Extract user info from session claims
- * Supports both Clerk's default claim names and custom claim names
- */
-function getUserInfo(sessionClaims: Record<string, unknown> | null) {
-  // Try multiple possible claim names for email
-  const email = 
-    (typeof sessionClaims?.email === "string" && sessionClaims.email) ||
-    (typeof sessionClaims?.emailAddress === "string" && sessionClaims.emailAddress) ||
-    (typeof sessionClaims?.primaryEmailAddress === "string" && sessionClaims.primaryEmailAddress) ||
-    "anonymous";
-
-  // Try multiple possible claim names for name
-  const name = 
-    (typeof sessionClaims?.fullName === "string" && sessionClaims.fullName) ||
-    (typeof sessionClaims?.name === "string" && sessionClaims.name) ||
-    (sessionClaims?.firstName && sessionClaims?.lastName 
-      ? `${sessionClaims.firstName} ${sessionClaims.lastName}`.trim()
-      : null) ||
-    (typeof sessionClaims?.firstName === "string" && sessionClaims.firstName) ||
-    "Anonymous";
-
-  // Try multiple possible claim names for avatar
-  const avatar = 
-    (typeof sessionClaims?.image === "string" && sessionClaims.image) ||
-    (typeof sessionClaims?.imageUrl === "string" && sessionClaims.imageUrl) ||
-    (typeof sessionClaims?.avatar === "string" && sessionClaims.avatar) ||
-    (typeof sessionClaims?.profileImageUrl === "string" && sessionClaims.profileImageUrl) ||
-    "";
-
-  return { email, name, avatar };
-}
-
-/**
  * Check if user has access to a specific room and the document exists
  * Validates both the user's room entry and the actual document existence
  * to prevent access to stale/deleted documents
@@ -65,13 +34,13 @@ async function hasRoomAccess(
   // Check both room access and document existence in parallel
   const [roomDoc, documentDoc] = await Promise.all([
     adminDb
-      .collection("users")
+      .collection(COLLECTIONS.USERS)
       .doc(userEmail)
-      .collection("rooms")
+      .collection(COLLECTIONS.ROOMS)
       .doc(roomId)
       .get(),
     adminDb
-      .collection("documents")
+      .collection(COLLECTIONS.DOCUMENTS)
       .doc(roomId)
       .get(),
   ]);
@@ -81,9 +50,9 @@ async function hasRoomAccess(
 }
 
 /**
- * Create an error response
+ * Create an error response for API routes
  */
-function errorResponse(
+function apiErrorResponse(
   status: number,
   error: string,
   message: string
@@ -106,26 +75,26 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return errorResponse(400, "Bad Request", "Invalid JSON body");
+      return apiErrorResponse(400, "Bad Request", "Invalid JSON body");
     }
 
     const { room } = body;
 
     if (!room || typeof room !== "string") {
-      return errorResponse(400, "Bad Request", "Room ID is required");
+      return apiErrorResponse(400, "Bad Request", "Room ID is required");
     }
 
     // Sanitize room ID
     const roomId = room.trim();
     if (!roomId) {
-      return errorResponse(400, "Bad Request", "Room ID cannot be empty");
+      return apiErrorResponse(400, "Bad Request", "Room ID cannot be empty");
     }
 
     // Check room access (efficient single document lookup)
     const hasAccess = await hasRoomAccess(userInfo.email, roomId);
 
     if (!hasAccess) {
-      return errorResponse(
+      return apiErrorResponse(
         403,
         "Forbidden",
         "You do not have access to this room"
@@ -151,7 +120,7 @@ export async function POST(req: NextRequest) {
     console.error("[auth-endpoint] Error:", error);
 
     // Don't expose internal error details
-    return errorResponse(
+    return apiErrorResponse(
       500,
       "Internal Server Error",
       "An unexpected error occurred. Please try again."

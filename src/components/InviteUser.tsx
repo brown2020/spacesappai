@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { inviteUserToDocument } from "@/lib/documentActions";
-import { getRoomIdFromPath } from "@/lib/utils";
+import { getRoomIdFromPath, isValidEmail } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,17 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Basic email validation
- */
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 // ============================================================================
 // MAIN COMPONENT
