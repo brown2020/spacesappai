@@ -88,14 +88,15 @@ function getModel(modelName: AIModelName) {
 
 /**
  * Generate a streaming AI response
+ * Note: Auth is verified by the caller before invoking this function
+ * Note: AbortSignal cannot be passed from client to server actions as it's not serializable.
+ * Cancellation is handled client-side by ignoring the stream response.
  */
 async function generateStreamingResponse(
   systemPrompt: string,
   userPrompt: string,
   modelName: AIModelName
 ) {
-  await auth.protect();
-
   const model = getModel(modelName);
 
   const messages: CoreMessage[] = [
@@ -131,21 +132,17 @@ export async function generateSummary(
   modelName: AIModelName
 ) {
   await auth.protect();
-  
+
   // Validate document size and content
   validateDocument(document);
-  
+
   if (!language || typeof language !== "string") {
     throw new Error("Language is required");
   }
 
   const userPrompt = `Provided document:\n${document}\n\nProvided language:\n${language}`;
 
-  return generateStreamingResponse(
-    AI_PROMPTS.TRANSLATION,
-    userPrompt,
-    modelName
-  );
+  return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
 }
 
 /**
@@ -163,10 +160,10 @@ export async function generateAnswer(
   modelName: AIModelName
 ) {
   await auth.protect();
-  
+
   // Validate document size and content
   validateDocument(document);
-  
+
   if (!question || typeof question !== "string" || !question.trim()) {
     throw new Error("Question is required");
   }

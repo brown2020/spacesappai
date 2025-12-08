@@ -10,12 +10,18 @@ import { Button } from "./ui/button";
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Render prop for fallback that receives error and retry function */
+  fallbackRender?: (props: {
+    error: Error | null;
+    onRetry: () => void;
+  }) => ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  retryCount: number;
 }
 
 // ============================================================================
@@ -55,7 +61,18 @@ function DefaultFallback({ error, onRetry }: DefaultFallbackProps) {
  *
  * @example
  * ```tsx
+ * // With static fallback
  * <ErrorBoundary fallback={<p>Something went wrong</p>}>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ *
+ * // With fallback render prop (allows retry)
+ * <ErrorBoundary fallbackRender={({ error, onRetry }) => (
+ *   <div>
+ *     <p>Error: {error?.message}</p>
+ *     <button onClick={onRetry}>Retry</button>
+ *   </div>
+ * )}>
  *   <MyComponent />
  * </ErrorBoundary>
  * ```
@@ -66,10 +83,10 @@ export class ErrorBoundary extends Component<
 > {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
@@ -82,16 +99,29 @@ export class ErrorBoundary extends Component<
   }
 
   handleRetry = (): void => {
-    this.setState({ hasError: false, error: null });
+    this.setState((prev) => ({
+      hasError: false,
+      error: null,
+      retryCount: prev.retryCount + 1,
+    }));
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Render custom fallback or default
+      // Render with fallbackRender prop if provided (allows retry)
+      if (this.props.fallbackRender) {
+        return this.props.fallbackRender({
+          error: this.state.error,
+          onRetry: this.handleRetry,
+        });
+      }
+
+      // Render static fallback if provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
+      // Render default fallback with retry
       return (
         <DefaultFallback
           error={this.state.error}
@@ -100,13 +130,55 @@ export class ErrorBoundary extends Component<
       );
     }
 
-    return this.props.children;
+    // Use key to force remount of children on retry
+    return (
+      <div key={this.state.retryCount}>
+        {this.props.children}
+      </div>
+    );
   }
 }
 
 // ============================================================================
 // DOCUMENT ERROR BOUNDARY
 // ============================================================================
+
+interface DocumentFallbackProps {
+  error: Error | null;
+  onRetry: () => void;
+}
+
+function DocumentFallback({ error, onRetry }: DocumentFallbackProps) {
+  const isNetworkError =
+    error?.message.toLowerCase().includes("network") ||
+    error?.message.toLowerCase().includes("fetch");
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 rounded-lg">
+      <div className="text-center max-w-md">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">
+          Unable to load document
+        </h2>
+        <p className="text-gray-600 mb-4">
+          {isNetworkError
+            ? "Please check your internet connection and try again."
+            : "There was a problem loading this document. Please try again or contact support if the issue persists."}
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Button onClick={onRetry} variant="default">
+            Try Again
+          </Button>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+          >
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Specialized error boundary for document/editor sections
@@ -115,25 +187,9 @@ export class ErrorBoundary extends Component<
 export function DocumentErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
-      fallback={
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 rounded-lg">
-          <div className="text-center max-w-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              Unable to load document
-            </h2>
-            <p className="text-gray-600 mb-4">
-              There was a problem loading this document. Please try refreshing
-              the page or contact support if the issue persists.
-            </p>
-            <Button
-              onClick={() => window.location.reload()}
-              variant="default"
-            >
-              Refresh Page
-            </Button>
-          </div>
-        </div>
-      }
+      fallbackRender={({ error, onRetry }) => (
+        <DocumentFallback error={error} onRetry={onRetry} />
+      )}
     >
       {children}
     </ErrorBoundary>

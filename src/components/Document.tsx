@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useDocumentTitle, useOwner } from "@/hooks";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -25,9 +26,14 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
     useDocumentTitle(documentId);
   const { isOwner } = useOwner();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    updateTitle();
+    try {
+      await updateTitle();
+    } catch (err) {
+      console.error("[DocumentHeader] Failed to update title:", err);
+      toast.error("Failed to update title. Please try again.");
+    }
   };
 
   return (

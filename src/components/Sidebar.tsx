@@ -32,11 +32,13 @@ function SidebarMenuContent() {
           </h2>
           {documents.owner.length > 0 ? (
             <ul className="flex flex-col gap-2">
-              {documents.owner.map((doc) => (
-                <li key={doc.id}>
-                  <SidebarOption href={`/doc/${doc.id}`} id={doc.id!} />
-                </li>
-              ))}
+              {documents.owner.map((doc) =>
+                doc.id ? (
+                  <li key={doc.id}>
+                    <SidebarOption href={`/doc/${doc.id}`} id={doc.id} />
+                  </li>
+                ) : null
+              )}
             </ul>
           ) : (
             <p className="text-gray-400 text-sm">No documents yet</p>
@@ -50,11 +52,13 @@ function SidebarMenuContent() {
               Shared with me
             </h2>
             <ul className="flex flex-col gap-2">
-              {documents.editor.map((doc) => (
-                <li key={doc.id}>
-                  <SidebarOption href={`/doc/${doc.id}`} id={doc.id!} />
-                </li>
-              ))}
+              {documents.editor.map((doc) =>
+                doc.id ? (
+                  <li key={doc.id}>
+                    <SidebarOption href={`/doc/${doc.id}`} id={doc.id} />
+                  </li>
+                ) : null
+              )}
             </ul>
           </section>
         )}

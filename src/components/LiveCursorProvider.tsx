@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useMyPresence, useOthers } from "@liveblocks/react/suspense";
 import { AnimatePresence } from "framer-motion";
 import FollowPointer from "./FollowPointer";
@@ -13,6 +13,13 @@ import type { ChildrenProps } from "@/types";
 export default function LiveCursorProvider({ children }: ChildrenProps) {
   const [, updateMyPresence] = useMyPresence();
   const others = useOthers();
+
+  // Clear cursor presence on unmount to prevent stale cursors for other users
+  useEffect(() => {
+    return () => {
+      updateMyPresence({ cursor: null });
+    };
+  }, [updateMyPresence]);
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {

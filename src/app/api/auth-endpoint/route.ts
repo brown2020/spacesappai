@@ -39,21 +39,30 @@ function getUserInfo(sessionClaims: Record<string, unknown> | null) {
 }
 
 /**
- * Check if user has access to a specific room
- * More efficient: queries only the specific room document instead of all rooms
+ * Check if user has access to a specific room and the document exists
+ * Validates both the user's room entry and the actual document existence
+ * to prevent access to stale/deleted documents
  */
 async function hasRoomAccess(
   userEmail: string,
   roomId: string
 ): Promise<boolean> {
-  const roomDoc = await adminDb
-    .collection("users")
-    .doc(userEmail)
-    .collection("rooms")
-    .doc(roomId)
-    .get();
+  // Check both room access and document existence in parallel
+  const [roomDoc, documentDoc] = await Promise.all([
+    adminDb
+      .collection("users")
+      .doc(userEmail)
+      .collection("rooms")
+      .doc(roomId)
+      .get(),
+    adminDb
+      .collection("documents")
+      .doc(roomId)
+      .get(),
+  ]);
 
-  return roomDoc.exists;
+  // User must have a room entry AND the document must exist
+  return roomDoc.exists && documentDoc.exists;
 }
 
 /**

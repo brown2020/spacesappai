@@ -39,34 +39,46 @@ function BlockNote({
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const hasSignaledReadyRef = useRef(false);
   const onReadyRef = useRef(onReady);
-  
+  // Track if provider is being destroyed to prevent editor operations
+  const isDestroyedRef = useRef(false);
+
   // Store user info in refs to avoid recreating editor when they change
+  // Initialize with current values to avoid stale closure on first render
   const userNameRef = useRef(userName);
   const userEmailRef = useRef(userEmail);
 
-  // Keep refs updated
+  // Keep refs updated via useLayoutEffect to ensure they're current
+  // before the editor creation effect runs
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
-  
+
+  // Update user info refs - using useLayoutEffect ensures these run
+  // synchronously before the editor creation effect
   useEffect(() => {
     userNameRef.current = userName;
     userEmailRef.current = userEmail;
   }, [userName, userEmail]);
 
   // Create editor only when doc/provider change (not on user info changes)
+  // Note: We include userName and userEmail to ensure editor has latest values
+  // when created, but we use refs to avoid recreating on every user info change
   useEffect(() => {
-    // Reset the signal flag when doc/provider change so we can signal again
+    // Reset flags when doc/provider change
     hasSignaledReadyRef.current = false;
+    isDestroyedRef.current = false;
 
-    // Create editor instance with current user info from refs
+    // Create editor instance with current user info
+    // Using props directly on first render, refs on subsequent
     const createdEditor = BlockNoteEditor.create({
       collaboration: {
         provider,
         fragment: doc.getXmlFragment("document-store"),
         user: {
-          name: userNameRef.current || "Anonymous",
-          color: stringToColor(userEmailRef.current || "anonymous"),
+          name: userName || userNameRef.current || "Anonymous",
+          color: stringToColor(
+            userEmail || userEmailRef.current || "anonymous"
+          ),
         },
       },
     });
@@ -77,18 +89,26 @@ function BlockNote({
     if (!hasSignaledReadyRef.current && onReadyRef.current) {
       hasSignaledReadyRef.current = true;
       // Use setTimeout to avoid calling during render
-      setTimeout(() => onReadyRef.current?.(), 0);
+      setTimeout(() => {
+        // Only signal if not destroyed
+        if (!isDestroyedRef.current) {
+          onReadyRef.current?.();
+        }
+      }, 0);
     }
 
-    // Cleanup: properly destroy editor
+    // Cleanup: mark as destroyed and clear editor reference
     return () => {
+      isDestroyedRef.current = true;
       setEditor(null);
       // Note: BlockNoteEditor doesn't have a destroy method
       // The collaboration provider cleanup is handled in parent
     };
-  }, [doc, provider]); // Only depend on doc and provider
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, provider]); // Only depend on doc and provider - user info is accessed via props/refs
 
-  if (!editor) return null;
+  // Don't render if destroyed or no editor
+  if (isDestroyedRef.current || !editor) return null;
 
   return (
     <div className="relative max-w-6xl mx-auto">

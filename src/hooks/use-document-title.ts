@@ -31,6 +31,18 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
   const hasInitializedRef = useRef(false);
   // Track if an update is in flight (prevents race conditions)
   const updateInFlightRef = useRef(false);
+  // Track timeout for cleanup to prevent memory leaks
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
+  // Track mounted state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Sync title with Firestore data only on initial load
   // or when the remote title changes AND user hasn't edited
@@ -48,11 +60,19 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     }
   }, [data?.title]);
 
-  // Reset refs when document changes
+  // Reset refs when document changes and cleanup timeout
   useEffect(() => {
     hasInitializedRef.current = false;
     hasUserEditedRef.current = false;
     updateInFlightRef.current = false;
+
+    // Cleanup timeout on document change or unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [documentId]);
 
   // Wrapper for setTitle that tracks user edits
@@ -67,7 +87,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
 
     setIsUpdating(true);
     updateInFlightRef.current = true;
-    
+
     try {
       await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, documentId), {
         title: trimmedTitle,
@@ -79,11 +99,19 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
       // Re-throw so caller can handle if needed
       throw err;
     } finally {
-      setIsUpdating(false);
-      // Delay resetting the in-flight flag to allow Firestore real-time 
+      // Only update state if still mounted
+      if (isMountedRef.current) {
+        setIsUpdating(false);
+      }
+      // Clear any existing timeout before setting a new one
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      // Delay resetting the in-flight flag to allow Firestore real-time
       // listener to catch up with our update, preventing stale data flash
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         updateInFlightRef.current = false;
+        timeoutRef.current = null;
       }, 500);
     }
   }, [documentId, title, isUpdating]);

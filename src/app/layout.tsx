@@ -37,6 +37,13 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider dynamic>
+      {/* 
+        suppressHydrationWarning is required because:
+        1. Clerk injects authentication state that may differ between server and client
+        2. Some UI libraries (Radix, Framer Motion) generate different IDs server vs client
+        This prevents React hydration mismatch warnings without masking actual bugs
+        since we only apply it to the html element, not descendants.
+      */}
       <html lang="en" suppressHydrationWarning>
         <body className="antialiased">
           <div className="flex flex-col min-h-screen">

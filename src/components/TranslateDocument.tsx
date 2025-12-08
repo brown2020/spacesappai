@@ -54,11 +54,15 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
   const isMountedRef = useRef(true);
   // Track current request ID to allow cancellation of outdated requests
   const currentRequestIdRef = useRef(0);
+  // AbortController for cancelling in-flight requests
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      // Abort any in-flight request on unmount
+      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -66,6 +70,13 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
     e.preventDefault();
 
     if (!language) return;
+
+    // Abort any previous request
+    abortControllerRef.current?.abort();
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     // Increment request ID to invalidate any pending requests
     const requestId = ++currentRequestIdRef.current;
@@ -75,11 +86,17 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
 
     try {
       const documentData = doc.get("document-store").toJSON();
+      // Note: AbortSignal can't be passed to server actions, so cancellation
+      // is handled client-side by checking abortController.signal.aborted
       const result = await generateSummary(documentData, language, modelName);
 
       for await (const content of readStreamableValue(result)) {
-        // Check if this request is still current and component is mounted
-        if (!isMountedRef.current || requestId !== currentRequestIdRef.current) {
+        // Check if this request is still current, component is mounted, and not aborted
+        if (
+          !isMountedRef.current || 
+          requestId !== currentRequestIdRef.current ||
+          abortController.signal.aborted
+        ) {
           break;
         }
 
@@ -88,17 +105,30 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
         }
       }
 
-      // Only show toast if still mounted and request is current
-      if (isMountedRef.current && requestId === currentRequestIdRef.current) {
+      // Only show toast if still mounted, request is current, and not aborted
+      if (
+        isMountedRef.current && 
+        requestId === currentRequestIdRef.current &&
+        !abortController.signal.aborted
+      ) {
         toast.success(`Summary translated to ${LANGUAGE_LABELS[language]}`);
       }
     } catch (error) {
+      // Don't log or show error for aborted requests
+      if (abortController.signal.aborted) {
+        return;
+      }
+      
       console.error("[TranslateDocument] Error:", error);
       if (isMountedRef.current && requestId === currentRequestIdRef.current) {
         toast.error("Failed to translate. Please try again.");
       }
     } finally {
-      if (isMountedRef.current && requestId === currentRequestIdRef.current) {
+      if (
+        isMountedRef.current && 
+        requestId === currentRequestIdRef.current &&
+        !abortController.signal.aborted
+      ) {
         setIsPending(false);
       }
     }
@@ -107,6 +137,9 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
+      // Abort any in-flight request when closing
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
       // Invalidate any pending request when closing
       currentRequestIdRef.current++;
       // Reset state when closing
