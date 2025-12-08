@@ -24,7 +24,7 @@ interface DocumentHeaderProps {
 function DocumentHeader({ documentId }: DocumentHeaderProps) {
   const { title, setTitle, updateTitle, isUpdating } =
     useDocumentTitle(documentId);
-  const { isOwner } = useOwner();
+  const { isOwner, isReady } = useOwner();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -50,7 +50,8 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
           {isUpdating ? "Updating..." : "Update"}
         </Button>
 
-        {isOwner && (
+        {/* Show owner controls only after ownership check completes to prevent flash */}
+        {isReady && isOwner && (
           <>
             <InviteUser />
             <DeleteDocument />
