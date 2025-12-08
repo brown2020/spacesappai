@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { MenuIcon } from "lucide-react";
 import { useUserDocuments } from "@/hooks";
 import NewDocumentButton from "./NewDocumentButton";
@@ -73,6 +74,25 @@ function SidebarMenuContent() {
 // ============================================================================
 
 function MobileSidebar() {
+  // Prevent hydration mismatch from Radix UI generating different IDs
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Show a simple button placeholder during SSR to prevent layout shift
+  if (!isMounted) {
+    return (
+      <button
+        className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
+        aria-label="Open menu"
+      >
+        <MenuIcon size={24} />
+      </button>
+    );
+  }
+
   return (
     <Sheet>
       <SheetTrigger asChild>
