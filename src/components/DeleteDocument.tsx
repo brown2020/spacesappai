@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useRoomId } from "@/hooks";
 import { deleteDocument } from "@/lib/documentActions";
-import { getRoomIdFromPath } from "@/lib/utils";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -22,14 +22,12 @@ import {
 // ============================================================================
 
 export default function DeleteDocument() {
-  const pathname = usePathname();
+  const roomId = useRoomId();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleDelete = () => {
-    const roomId = getRoomIdFromPath(pathname);
-
     if (!roomId) {
       toast.error("Unable to determine document ID");
       return;

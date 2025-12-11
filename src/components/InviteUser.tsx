@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { useRoomId } from "@/hooks";
 import { inviteUserToDocument } from "@/lib/documentActions";
-import { getRoomIdFromPath, isValidEmail } from "@/lib/utils";
+import { isValidEmail } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +21,7 @@ import {
 // ============================================================================
 
 export default function InviteUser() {
-  const pathname = usePathname();
+  const roomId = useRoomId();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
@@ -37,7 +37,6 @@ export default function InviteUser() {
       return;
     }
 
-    const roomId = getRoomIdFromPath(pathname);
     if (!roomId) {
       setError("Unable to determine document ID");
       return;

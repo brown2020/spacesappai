@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { readStreamableValue } from "@ai-sdk/rsc";
+import { useIsMounted } from "./use-is-mounted";
 import type { ActionResponse } from "@/types";
 
 // ============================================================================
@@ -68,18 +69,16 @@ export function useStreamingRequest(
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState("");
 
-  // Track if component is still mounted
-  const isMountedRef = useRef(true);
+  // Reuse the shared mounted tracking hook
+  const isMountedRef = useIsMounted();
   // Track current request ID to allow cancellation of outdated requests
   const currentRequestIdRef = useRef(0);
   // AbortController for cancelling in-flight requests
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Cleanup abort controller on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false;
-      // Abort any in-flight request on unmount
       abortControllerRef.current?.abort();
     };
   }, []);
@@ -174,4 +173,3 @@ export function useStreamingRequest(
 
   return { isPending, result, reset, execute };
 }
-

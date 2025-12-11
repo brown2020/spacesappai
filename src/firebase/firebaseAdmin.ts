@@ -70,28 +70,3 @@ export const adminBucket: Bucket = getStorage().bucket();
  * Firebase Admin SDK reference
  */
 export { admin };
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Get a document reference in admin Firestore
- */
-export function getDocRef(collection: string, docId: string) {
-  return adminDb.collection(collection).doc(docId);
-}
-
-/**
- * Get a collection reference in admin Firestore
- */
-export function getCollectionRef(collection: string) {
-  return adminDb.collection(collection);
-}
-
-/**
- * Batch write helper for multiple operations
- */
-export function createBatch() {
-  return adminDb.batch();
-}

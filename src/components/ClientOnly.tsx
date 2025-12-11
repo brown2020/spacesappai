@@ -31,7 +31,10 @@ interface ClientOnlyProps {
  * </ClientOnly>
  * ```
  */
-export default function ClientOnly({ children, fallback = null }: ClientOnlyProps) {
+export default function ClientOnly({
+  children,
+  fallback = null,
+}: ClientOnlyProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -39,9 +42,8 @@ export default function ClientOnly({ children, fallback = null }: ClientOnlyProp
   }, []);
 
   if (!isMounted) {
-    return fallback;
+    return <>{fallback}</>;
   }
 
-  return children;
+  return <>{children}</>;
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRoom, useSelf } from "@liveblocks/react/suspense";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
@@ -13,8 +14,14 @@ import { useLatest } from "@/hooks";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
 import stringToColor from "@/lib/stringToColor";
-import TranslateDocument from "./TranslateDocument";
-import ChatToDocument from "./ChatToDocument";
+
+// Dynamic imports for code splitting - AI features are not needed until user clicks
+const TranslateDocument = dynamic(() => import("./TranslateDocument"), {
+  ssr: false,
+});
+const ChatToDocument = dynamic(() => import("./ChatToDocument"), {
+  ssr: false,
+});
 
 // ============================================================================
 // BLOCKNOTE EDITOR COMPONENT

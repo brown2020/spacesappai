@@ -2,30 +2,12 @@
 
 import { useState } from "react";
 import * as Y from "yjs";
-import { toast } from "sonner";
-import Markdown from "react-markdown";
 import { MessageCircleCode } from "lucide-react";
-import { useStreamingRequest } from "@/hooks";
 import { generateAnswer } from "@/lib/generateActions";
-import { AI_MODELS, DEFAULT_AI_MODEL } from "@/constants";
-import type { AIModelName } from "@/types";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import AIDialog from "./AIDialog";
+import AIModelSelect from "./AIModelSelect";
 
 // ============================================================================
 // TYPES
@@ -40,79 +22,29 @@ interface ChatToDocumentProps {
 // ============================================================================
 
 export default function ChatToDocument({ doc }: ChatToDocumentProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
-  const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
-
-  const {
-    isPending,
-    result: answer,
-    execute,
-    reset,
-  } = useStreamingRequest({
-    successMessage: "Question answered successfully",
-    errorMessage: "Failed to get answer. Please try again.",
-  });
-
-  const handleAskQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!question.trim()) return;
-
-    // Get document data and validate it's not empty
-    const documentData = doc.get("document-store").toJSON();
-    if (
-      !documentData ||
-      (typeof documentData === "string" && !documentData.trim())
-    ) {
-      toast.error(
-        "Document is empty. Add some content before asking questions."
-      );
-      return;
-    }
-
-    await execute(() =>
-      generateAnswer(
-        typeof documentData === "string"
-          ? documentData
-          : JSON.stringify(documentData),
-        question,
-        modelName
-      )
-    );
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      // Reset state when closing
-      setQuestion("");
-      reset();
-    }
-  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <AIDialog
+      doc={doc}
+      trigger={
         <Button variant="outline">
           <MessageCircleCode className="mr-2 h-4 w-4" />
           Chat
         </Button>
-      </DialogTrigger>
-
-      <DialogContent className="flex flex-col gap-4 w-[90vw] max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Ask a Question</DialogTitle>
-          <DialogDescription>
-            Ask any question about this document and AI will answer based on its
-            content.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          className="flex flex-col sm:flex-row gap-3"
-          onSubmit={handleAskQuestion}
-        >
+      }
+      title="Ask a Question"
+      description="Ask any question about this document and AI will answer based on its content."
+      successMessage="Question answered successfully"
+      errorMessage="Failed to get answer. Please try again."
+      emptyDocumentMessage="Document is empty. Add some content before asking questions."
+      onSubmit={(content, modelName) => {
+        if (!question.trim()) return Promise.resolve();
+        return generateAnswer(content, question, modelName);
+      }}
+    >
+      {({ modelName, setModelName, isPending }) => (
+        <>
           <Input
             type="text"
             placeholder="What is this document about?"
@@ -122,34 +54,17 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
             disabled={isPending}
           />
 
-          <Select
+          <AIModelSelect
             value={modelName}
-            onValueChange={(value) => setModelName(value as AIModelName)}
+            onChange={setModelName}
             disabled={isPending}
-          >
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Select Model" />
-            </SelectTrigger>
-            <SelectContent>
-              {AI_MODELS.map((model) => (
-                <SelectItem key={model.value} value={model.value}>
-                  {model.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
 
           <Button type="submit" disabled={!question.trim() || isPending}>
             {isPending ? "Thinking..." : "Ask"}
           </Button>
-        </form>
-
-        {answer && (
-          <div className="p-4 bg-gray-50 rounded-lg overflow-y-auto max-h-64 prose prose-sm max-w-none">
-            <Markdown>{answer}</Markdown>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    </AIDialog>
   );
 }

@@ -32,37 +32,40 @@ interface AvatarItemProps {
   isSelf: boolean;
 }
 
+/**
+ * Single avatar item with tooltip
+ * Note: Must be wrapped in TooltipProvider by parent
+ */
 function AvatarItem({ name, avatar, isSelf }: AvatarItemProps) {
   const displayName = isSelf ? "You" : name;
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .filter(Boolean)
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?";
+  const initials =
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .filter(Boolean)
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "?";
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Avatar
-            className={cn(
-              "border-2 border-white cursor-pointer transition-transform hover:scale-110 hover:z-10",
-              isSelf && "ring-2 ring-purple-500"
-            )}
-          >
-            <AvatarImage src={avatar} alt={displayName} />
-            <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
-          {displayName}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Avatar
+          className={cn(
+            "border-2 border-white cursor-pointer transition-transform hover:scale-110 hover:z-10",
+            isSelf && "ring-2 ring-purple-500"
+          )}
+        >
+          <AvatarImage src={avatar} alt={displayName} />
+          <AvatarFallback className="bg-purple-100 text-purple-700 text-xs font-medium">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {displayName}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -111,19 +114,24 @@ export default function Avatars() {
   return (
     <div className="flex items-center gap-3">
       <span className="text-sm text-gray-500 hidden sm:inline">
-        {uniqueUsers.length === 1 ? "Just you" : `${uniqueUsers.length} editing`}
+        {uniqueUsers.length === 1
+          ? "Just you"
+          : `${uniqueUsers.length} editing`}
       </span>
 
-      <div className="flex -space-x-3">
-        {uniqueUsers.map((user) => (
-          <AvatarItem
-            key={user.id}
-            name={user.name}
-            avatar={user.avatar}
-            isSelf={user.isSelf}
-          />
-        ))}
-      </div>
+      {/* Single TooltipProvider wrapping all avatars for better performance */}
+      <TooltipProvider delayDuration={100}>
+        <div className="flex -space-x-3">
+          {uniqueUsers.map((user) => (
+            <AvatarItem
+              key={user.id}
+              name={user.name}
+              avatar={user.avatar}
+              isSelf={user.isSelf}
+            />
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
