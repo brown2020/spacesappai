@@ -34,3 +34,4 @@ export function getDocumentContent(doc: Y.Doc): string | null {
 export function hasDocumentContent(doc: Y.Doc): boolean {
   return getDocumentContent(doc) !== null;
 }
+

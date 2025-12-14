@@ -26,3 +26,4 @@ export function useRoomId(): string | null {
 
   return useMemo(() => getRoomIdFromPath(pathname), [pathname]);
 }
+
