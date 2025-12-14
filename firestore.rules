@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// ============================================================================
+// FIRESTORE SECURITY RULES FOR SPACES APP
+// ============================================================================
+//
+// Data Model:
+//   documents/{documentId}          - Document metadata (title, timestamps)
+//   users/{userEmail}/rooms/{docId} - User's access to documents (role-based)
+//
+// Roles:
+//   owner  - Can read, write, delete document; manage users
+//   editor - Can read and write document content
+//
+// Copy this entire file to Firebase Console > Firestore > Rules
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the user's email from auth token
+    function getUserEmail() {
+      return request.auth.token.email;
+    }
+
+    // Check if user has any access to a document (owner or editor)
+    function hasRoomAccess(documentId) {
+      return exists(/databases/$(database)/documents/users/$(getUserEmail())/rooms/$(documentId));
+    }
+
+    // Get user's role for a document
+    function getUserRole(documentId) {
+      return get(/databases/$(database)/documents/users/$(getUserEmail())/rooms/$(documentId)).data.role;
+    }
+
+    // Check if user is the owner of a document
+    function isOwner(documentId) {
+      return hasRoomAccess(documentId) && getUserRole(documentId) == 'owner';
+    }
+
+    // Check if user is an editor of a document
+    function isEditor(documentId) {
+      return hasRoomAccess(documentId) && getUserRole(documentId) == 'editor';
+    }
+
+    // Check if user can read/write a document (owner or editor)
+    function canAccessDocument(documentId) {
+      return isOwner(documentId) || isEditor(documentId);
+    }
+
+    // Validate document data on create/update
+    function isValidDocumentData() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['title'])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 500;
+    }
+
+    // Validate room data
+    function isValidRoomData() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'role', 'roomId', 'createdAt'])
+        && data.userId is string
+        && data.role in ['owner', 'editor']
+        && data.roomId is string;
+    }
+
+    // ========================================================================
+    // DOCUMENTS COLLECTION
+    // ========================================================================
+
+    match /documents/{documentId} {
+      // Allow read if user has room access (owner or editor)
+      allow read: if isAuthenticated() && canAccessDocument(documentId);
+
+      // Allow create if authenticated (room access is created atomically by server)
+      // Note: Document creation is handled by server actions with admin SDK
+      allow create: if isAuthenticated();
+
+      // Allow update if user has access (owner or editor can edit)
+      allow update: if isAuthenticated()
+        && canAccessDocument(documentId)
+        && isValidDocumentData();
+
+      // Allow delete only if user is the owner
+      allow delete: if isAuthenticated() && isOwner(documentId);
+    }
+
+    // ========================================================================
+    // USERS COLLECTION (Room Access)
+    // ========================================================================
+
+    match /users/{userEmail} {
+      // Users can read their own user document
+      allow read: if isAuthenticated() && getUserEmail() == userEmail;
+
+      // Room subcollection - tracks which documents a user has access to
+      match /rooms/{roomId} {
+        // Users can read their own room entries
+        allow read: if isAuthenticated() && getUserEmail() == userEmail;
+
+        // Allow create if:
+        // 1. User is creating their own entry as owner (new document), OR
+        // 2. Existing owner is inviting this user as editor
+        allow create: if isAuthenticated()
+          && isValidRoomData()
+          && (
+            // Creating own entry as owner
+            (getUserEmail() == userEmail && request.resource.data.role == 'owner')
+            // OR being invited by the document owner
+            || (isOwner(roomId) && request.resource.data.role == 'editor')
+          );
+
+        // Only owners can update room entries (e.g., change roles)
+        allow update: if isAuthenticated()
+          && isOwner(roomId)
+          && isValidRoomData();
+
+        // Allow delete if:
+        // 1. Owner is removing someone else, OR
+        // 2. User is removing themselves (leaving document)
+        allow delete: if isAuthenticated()
+          && (
+            isOwner(roomId)
+            || getUserEmail() == userEmail
+          );
+      }
+    }
+
+    // ========================================================================
+    // COLLECTION GROUP QUERIES
+    // ========================================================================
+
+    // Allow collection group queries on 'rooms' for finding all users in a room
+    // This is used by useRoomUsers hook
+    match /{path=**}/rooms/{roomId} {
+      allow read: if isAuthenticated() && hasRoomAccess(roomId);
+    }
+  }
+}

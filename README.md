@@ -432,21 +432,18 @@ import ClientOnly from "@/components/ClientOnly";
 <details>
 <summary><strong>Firebase permission denied</strong></summary>
 
-Ensure your Firestore security rules allow authenticated users:
+Deploy the security rules from the project root:
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /documents/{docId} {
-      allow read, write: if request.auth != null;
-    }
-    match /users/{userId}/rooms/{roomId} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
+1. Copy `firestore.rules` to Firebase Console → Firestore → Rules
+2. Copy `storage.rules` to Firebase Console → Storage → Rules
+
+Or use Firebase CLI:
+
+```bash
+firebase deploy --only firestore:rules,storage
 ```
+
+See [firestore.rules](./firestore.rules) and [storage.rules](./storage.rules) for the full rule definitions.
 
 </details>
 
