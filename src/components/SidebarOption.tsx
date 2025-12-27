@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { doc } from "firebase/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
@@ -32,7 +33,11 @@ function SidebarOptionSkeleton() {
 
 export default function SidebarOption({ href, id }: SidebarOptionProps) {
   const pathname = usePathname();
-  const [data, loading] = useDocumentData(doc(db, COLLECTIONS.DOCUMENTS, id));
+  const docRef = useMemo(
+    () => doc(db, COLLECTIONS.DOCUMENTS, id),
+    [id]
+  );
+  const [data, loading] = useDocumentData(docRef);
 
   const isActive = pathname === href;
 

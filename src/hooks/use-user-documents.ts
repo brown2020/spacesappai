@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { collectionGroup, query, where } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { useUser } from "@clerk/nextjs";
-import { db } from "@/firebase/firebaseConfig";
+import { COLLECTIONS, db } from "@/firebase/firebaseConfig";
 import type { GroupedRoomDocuments, RoomDocument } from "@/types";
 
 interface UseUserDocumentsReturn {
@@ -22,11 +22,15 @@ export function useUserDocuments(): UseUserDocumentsReturn {
   const { user } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress;
 
-  const [snapshot, isLoading, error] = useCollection(
-    userEmail
-      ? query(collectionGroup(db, "rooms"), where("userId", "==", userEmail))
-      : null
-  );
+  const roomsQuery = useMemo(() => {
+    if (!userEmail) return null;
+    return query(
+      collectionGroup(db, COLLECTIONS.ROOMS),
+      where("userId", "==", userEmail)
+    );
+  }, [userEmail]);
+
+  const [snapshot, isLoading, error] = useCollection(roomsQuery);
 
   const documents = useMemo<GroupedRoomDocuments>(() => {
     if (!snapshot?.docs) {

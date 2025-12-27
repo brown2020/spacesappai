@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
@@ -20,9 +20,11 @@ interface UseDocumentTitleReturn {
  * Prevents race condition where remote data overwrites user input
  */
 export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
-  const [data, isLoading, error] = useDocumentData(
-    doc(db, COLLECTIONS.DOCUMENTS, documentId)
+  const docRef = useMemo(
+    () => doc(db, COLLECTIONS.DOCUMENTS, documentId),
+    [documentId]
   );
+  const [data, isLoading, error] = useDocumentData(docRef);
   const [title, setTitle] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -82,7 +84,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     updateInFlightRef.current = true;
 
     try {
-      await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, documentId), {
+      await updateDoc(docRef, {
         title: trimmedTitle,
         updatedAt: new Date(),
       });
@@ -107,7 +109,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [documentId, title, isUpdating, isMountedRef]);
+  }, [docRef, title, isUpdating, isMountedRef]);
 
   return {
     title,

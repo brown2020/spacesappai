@@ -68,7 +68,11 @@ function BlockNote({
     // Using props directly on first render, refs on subsequent
     const createdEditor = BlockNoteEditor.create({
       collaboration: {
-        provider,
+        // NOTE: BlockNote's collaboration types reference `y-protocols/awareness`.
+        // Some providers (including Liveblocks) can end up with a different
+        // `Awareness` type in their dependency tree after upgrades, causing
+        // a TS-only incompatibility even though runtime behavior is correct.
+        provider: provider as unknown as any,
         fragment: doc.getXmlFragment("document-store"),
         user: {
           name: userName || userNameRef.current || "Anonymous",

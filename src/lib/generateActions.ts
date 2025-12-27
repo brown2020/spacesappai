@@ -1,7 +1,7 @@
 "use server";
 
 import { createStreamableValue } from "@ai-sdk/rsc";
-import { streamText, type CoreMessage } from "ai";
+import { streamText, type ModelMessage } from "ai";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
@@ -133,7 +133,7 @@ async function generateStreamingResponse(
 ) {
   const model = getModel(modelName);
 
-  const messages: CoreMessage[] = [
+  const messages: ModelMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
   ];

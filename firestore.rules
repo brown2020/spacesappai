@@ -19,6 +19,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ========================================================================
+    // 🚨 DEV OVERRIDE (TEMPORARY)
+    // ========================================================================
+    // If you're using Clerk without Firebase Auth, `request.auth` will be null
+    // and the strict rules below will block ALL client reads/writes.
+    //
+    // Turn this on ONLY to confirm the app wiring works, then turn it OFF.
+    function devOverrideAllowAll() {
+      return true; // <-- SET BACK TO false BEFORE DEPLOYING
+    }
+
+    // Global dev override: allows all reads/writes when enabled above.
+    match /{allPaths=**} {
+      allow read, write: if devOverrideAllowAll();
+    }
+
+    // ========================================================================
     // HELPER FUNCTIONS
     // ========================================================================
 

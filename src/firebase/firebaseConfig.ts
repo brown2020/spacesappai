@@ -1,5 +1,9 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  type Firestore,
+} from "firebase/firestore";
 import { getAuth, type Auth } from "firebase/auth";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { clientEnv } from "@/lib/env";
@@ -41,10 +45,38 @@ const app = initializeFirebaseApp();
 // FIREBASE SERVICES
 // ============================================================================
 
+declare global {
+  var __FIREBASE_CLIENT_DB__: Firestore | undefined;
+}
+
+function getClientFirestore(app: FirebaseApp): Firestore {
+  // In dev + Fast Refresh, modules can be re-evaluated. Cache the instance on
+  // globalThis to avoid multiple Firestore instances/listeners.
+  if (globalThis.__FIREBASE_CLIENT_DB__)
+    return globalThis.__FIREBASE_CLIENT_DB__;
+
+  const isBrowser = typeof window !== "undefined";
+  const isLocalhost =
+    isBrowser &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+
+  // Workaround for Firestore watch-stream internal assertion issues seen in
+  // some local dev setups (React/Next Fast Refresh + WebChannel streaming).
+  const db = isLocalhost
+    ? initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      })
+    : getFirestore(app);
+
+  globalThis.__FIREBASE_CLIENT_DB__ = db;
+  return db;
+}
+
 /**
  * Firestore database instance
  */
-export const db: Firestore = getFirestore(app);
+export const db: Firestore = getClientFirestore(app);
 
 /**
  * Firebase Authentication instance
