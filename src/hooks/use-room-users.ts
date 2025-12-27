@@ -11,7 +11,7 @@ interface UseRoomUsersReturn {
   users: RoomDocument[];
   isLoading: boolean;
   error: Error | undefined;
-  currentUserEmail: string | undefined;
+  currentUserId: string | undefined;
 }
 
 /**
@@ -40,13 +40,13 @@ export function useRoomUsers(roomId: string): UseRoomUsersReturn {
     })) as RoomDocument[];
   }, [snapshot]);
 
-  const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
+  const currentUserId = user?.id;
 
   return {
     users,
     isLoading,
     error,
-    currentUserEmail,
+    currentUserId,
   };
 }
 

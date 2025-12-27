@@ -21,6 +21,7 @@ import {
 
 interface UserListItemProps {
   userId: string;
+  label: string;
   role: string;
   isCurrentUser: boolean;
   isOwner: boolean;
@@ -30,13 +31,14 @@ interface UserListItemProps {
 
 function UserListItem({
   userId,
+  label,
   role,
   isCurrentUser,
   isOwner,
   onRemove,
   isRemoving,
 }: UserListItemProps) {
-  const displayName = isCurrentUser ? `You (${userId})` : userId;
+  const displayName = isCurrentUser ? `You (${label})` : label;
   const canRemove = isOwner && !isCurrentUser;
 
   return (
@@ -70,7 +72,7 @@ function UserListItem({
 
 export default function ManageUsers() {
   const room = useRoom();
-  const { users, currentUserEmail } = useRoomUsers(room.id);
+  const { users, currentUserId } = useRoomUsers(room.id);
   const { isOwner } = useOwner();
   const [, startTransition] = useTransition();
   // Track which specific user is being removed
@@ -126,8 +128,9 @@ export default function ManageUsers() {
                 <UserListItem
                   key={user.userId}
                   userId={user.userId}
+                  label={user.userEmail || user.userId}
                   role={user.role}
-                  isCurrentUser={user.userId === currentUserEmail}
+                  isCurrentUser={user.userId === currentUserId}
                   isOwner={isOwner}
                   onRemove={() => handleRemoveUser(user.userId)}
                   isRemoving={removingUserId === user.userId}

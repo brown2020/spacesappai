@@ -20,15 +20,15 @@ interface UseUserDocumentsReturn {
  */
 export function useUserDocuments(): UseUserDocumentsReturn {
   const { user } = useUser();
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const currentUserId = user?.id;
 
   const roomsQuery = useMemo(() => {
-    if (!userEmail) return null;
+    if (!currentUserId) return null;
     return query(
       collectionGroup(db, COLLECTIONS.ROOMS),
-      where("userId", "==", userEmail)
+      where("userId", "==", currentUserId)
     );
-  }, [userEmail]);
+  }, [currentUserId]);
 
   const [snapshot, isLoading, error] = useCollection(roomsQuery);
 

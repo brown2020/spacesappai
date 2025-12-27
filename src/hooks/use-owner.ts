@@ -30,21 +30,21 @@ interface UseOwnerReturn {
  */
 export function useOwner(): UseOwnerReturn {
   const room = useRoom();
-  const { users, isLoading, currentUserEmail } = useRoomUsers(room.id);
+  const { users, isLoading, currentUserId } = useRoomUsers(room.id);
 
   const isOwner = useMemo(() => {
     // Return false during loading - consumers should check isLoading/isReady
-    if (isLoading || !currentUserEmail || users.length === 0) return false;
+    if (isLoading || !currentUserId || users.length === 0) return false;
 
     return users.some(
-      (user) => user.role === "owner" && user.userId === currentUserEmail
+      (user) => user.role === "owner" && user.userId === currentUserId
     );
-  }, [users, currentUserEmail, isLoading]);
+  }, [users, currentUserId, isLoading]);
 
   return { 
     isOwner, 
     isLoading,
-    isReady: !isLoading && !!currentUserEmail,
+    isReady: !isLoading && !!currentUserId,
   };
 }
 

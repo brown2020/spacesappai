@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import FirebaseAuthBridge from "@/components/FirebaseAuthBridge";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       */}
       <html lang="en" suppressHydrationWarning>
         <body className="antialiased">
+          <FirebaseAuthBridge />
           <div className="flex flex-col min-h-screen">
             <Header />
 

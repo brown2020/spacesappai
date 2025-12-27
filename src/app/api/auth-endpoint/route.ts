@@ -27,22 +27,16 @@ interface ErrorResponse {
  * Validates both the user's room entry and the actual document existence
  * to prevent access to stale/deleted documents
  */
-async function hasRoomAccess(
-  userEmail: string,
-  roomId: string
-): Promise<boolean> {
+async function hasRoomAccess(userId: string, roomId: string): Promise<boolean> {
   // Check both room access and document existence in parallel
   const [roomDoc, documentDoc] = await Promise.all([
     adminDb
       .collection(COLLECTIONS.USERS)
-      .doc(userEmail)
+      .doc(userId)
       .collection(COLLECTIONS.ROOMS)
       .doc(roomId)
       .get(),
-    adminDb
-      .collection(COLLECTIONS.DOCUMENTS)
-      .doc(roomId)
-      .get(),
+    adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId).get(),
   ]);
 
   // User must have a room entry AND the document must exist
@@ -67,7 +61,7 @@ function apiErrorResponse(
 export async function POST(req: NextRequest) {
   try {
     // Authenticate the user
-    const { sessionClaims } = await auth.protect();
+    const { userId, sessionClaims } = await auth.protect();
     const userInfo = getUserInfo(sessionClaims);
 
     // Parse request body
@@ -91,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check room access (efficient single document lookup)
-    const hasAccess = await hasRoomAccess(userInfo.email, roomId);
+    const hasAccess = await hasRoomAccess(userId, roomId);
 
     if (!hasAccess) {
       return apiErrorResponse(
@@ -102,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Prepare Liveblocks session
-    const session = liveblocks.prepareSession(userInfo.email, {
+    const session = liveblocks.prepareSession(userId, {
       userInfo: {
         name: userInfo.name,
         email: userInfo.email,

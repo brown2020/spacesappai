@@ -6,7 +6,7 @@ rules_version = '2';
 //
 // Data Model:
 //   documents/{documentId}          - Document metadata (title, timestamps)
-//   users/{userEmail}/rooms/{docId} - User's access to documents (role-based)
+//   users/{uid}/rooms/{docId} - User's access to documents (role-based)
 //
 // Roles:
 //   owner  - Can read, write, delete document; manage users
@@ -19,22 +19,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ========================================================================
-    // 🚨 DEV OVERRIDE (TEMPORARY)
-    // ========================================================================
-    // If you're using Clerk without Firebase Auth, `request.auth` will be null
-    // and the strict rules below will block ALL client reads/writes.
-    //
-    // Turn this on ONLY to confirm the app wiring works, then turn it OFF.
-    function devOverrideAllowAll() {
-      return true; // <-- SET BACK TO false BEFORE DEPLOYING
-    }
-
-    // Global dev override: allows all reads/writes when enabled above.
-    match /{allPaths=**} {
-      allow read, write: if devOverrideAllowAll();
-    }
-
-    // ========================================================================
     // HELPER FUNCTIONS
     // ========================================================================
 
@@ -43,19 +27,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Get the user's email from auth token
-    function getUserEmail() {
-      return request.auth.token.email;
+    // Get the user's uid from auth token (Firebase Auth custom token uid = Clerk userId)
+    function getUserId() {
+      return request.auth.uid;
     }
 
     // Check if user has any access to a document (owner or editor)
     function hasRoomAccess(documentId) {
-      return exists(/databases/$(database)/documents/users/$(getUserEmail())/rooms/$(documentId));
+      return exists(/databases/$(database)/documents/users/$(getUserId())/rooms/$(documentId));
     }
 
     // Get user's role for a document
     function getUserRole(documentId) {
-      return get(/databases/$(database)/documents/users/$(getUserEmail())/rooms/$(documentId)).data.role;
+      return get(/databases/$(database)/documents/users/$(getUserId())/rooms/$(documentId)).data.role;
     }
 
     // Check if user is the owner of a document
@@ -116,14 +100,14 @@ service cloud.firestore {
     // USERS COLLECTION (Room Access)
     // ========================================================================
 
-    match /users/{userEmail} {
+    match /users/{uid} {
       // Users can read their own user document
-      allow read: if isAuthenticated() && getUserEmail() == userEmail;
+      allow read: if isAuthenticated() && getUserId() == uid;
 
       // Room subcollection - tracks which documents a user has access to
       match /rooms/{roomId} {
         // Users can read their own room entries
-        allow read: if isAuthenticated() && getUserEmail() == userEmail;
+        allow read: if isAuthenticated() && getUserId() == uid;
 
         // Allow create if:
         // 1. User is creating their own entry as owner (new document), OR
@@ -132,9 +116,13 @@ service cloud.firestore {
           && isValidRoomData()
           && (
             // Creating own entry as owner
-            (getUserEmail() == userEmail && request.resource.data.role == 'owner')
+            (getUserId() == uid
+              && request.resource.data.userId == uid
+              && request.resource.data.role == 'owner')
             // OR being invited by the document owner
-            || (isOwner(roomId) && request.resource.data.role == 'editor')
+            || (isOwner(roomId)
+              && request.resource.data.userId == uid
+              && request.resource.data.role == 'editor')
           );
 
         // Only owners can update room entries (e.g., change roles)
@@ -148,7 +136,7 @@ service cloud.firestore {
         allow delete: if isAuthenticated()
           && (
             isOwner(roomId)
-            || getUserEmail() == userEmail
+            || getUserId() == uid
           );
       }
     }

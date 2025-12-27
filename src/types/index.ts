@@ -42,6 +42,7 @@ export interface RoomDocument extends DocumentData {
   role: RoomRole;
   roomId: string;
   userId: string;
+  userEmail?: string;
 }
 
 /**
