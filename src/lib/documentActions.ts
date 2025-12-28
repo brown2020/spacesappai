@@ -3,7 +3,7 @@
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
-import { requireAuthenticatedUser } from "@/lib/firebase-session";
+import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import { errorResponse, successResponse } from "@/lib/action-utils";
 import type { ActionResponse, CreateDocumentResponse } from "@/types";
 
@@ -53,7 +53,7 @@ export async function createNewDocument(): Promise<
     return successResponse({ docId });
   } catch (error) {
     console.error("[createNewDocument] Error:", error);
-    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    if (isUnauthorizedError(error)) {
       return errorResponse<CreateDocumentResponse>(
         "UNAUTHORIZED",
         "Please sign in to create a document."
@@ -183,7 +183,7 @@ export async function deleteDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === "UNAUTHORIZED") {
+      if (isUnauthorizedError(error)) {
         return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
       }
       if (error.message === "FORBIDDEN") {
@@ -285,7 +285,7 @@ export async function inviteUserToDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === "UNAUTHORIZED") {
+      if (isUnauthorizedError(error)) {
         return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
       }
       if (error.message === "FORBIDDEN") {
@@ -367,7 +367,7 @@ export async function removeUserFromDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === "UNAUTHORIZED") {
+      if (isUnauthorizedError(error)) {
         return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
       }
       if (error.message === "FORBIDDEN") {

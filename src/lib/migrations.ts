@@ -70,13 +70,31 @@ export async function migrateUserRoomsToUid(): Promise<void> {
     const data = docSnap.data();
     const targetRef = newRoomsRef.doc(docSnap.id);
 
+    // IMPORTANT:
+    // Avoid downgrading an existing owner's role.
+    //
+    // Before this guard, a legacy "editor" entry could be merged onto an
+    // already-migrated "owner" entry (same doc id), overwriting `role` and
+    // effectively removing owner capabilities (delete/invite).
+    const existing = await targetRef.get();
+    const existingRole = existing.exists ? (existing.data()?.role as unknown) : null;
+    const legacyRole = (data?.role as unknown) ?? null;
+    const shouldForceOwner = existingRole === "owner" || legacyRole === "owner";
+
     batch.set(
       targetRef,
-      {
-        ...data,
-        userId: user.uid,
-        userEmail: email,
-      },
+      existing.exists
+        ? {
+            ...(shouldForceOwner ? { role: "owner" } : null),
+            userId: user.uid,
+            userEmail: email,
+          }
+        : {
+            ...data,
+            ...(shouldForceOwner ? { role: "owner" } : null),
+            userId: user.uid,
+            userEmail: email,
+          },
       { merge: true }
     );
 

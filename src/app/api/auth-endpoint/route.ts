@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
-import { requireAuthenticatedUser } from "@/lib/firebase-session";
+import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 
 // ============================================================================
 // TYPES
@@ -110,6 +110,10 @@ export async function POST(req: NextRequest) {
     return new NextResponse(authBody, { status });
   } catch (error) {
     console.error("[auth-endpoint] Error:", error);
+
+    if (isUnauthorizedError(error)) {
+      return apiErrorResponse(401, "Unauthorized", "Please sign in to continue.");
+    }
 
     // Don't expose internal error details
     return apiErrorResponse(

@@ -4,6 +4,11 @@ import type { DecodedIdToken } from "firebase-admin/auth";
 import { adminAuth } from "@/firebase/firebaseAdmin";
 
 export const SESSION_COOKIE_NAME = "__session";
+export const UNAUTHORIZED_ERROR_MESSAGE = "UNAUTHORIZED" as const;
+
+export function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof Error && error.message === UNAUTHORIZED_ERROR_MESSAGE;
+}
 
 export interface AuthenticatedUser {
   uid: string;
@@ -37,7 +42,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
 export async function requireAuthenticatedUser(): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser();
   if (!user) {
-    throw new Error("UNAUTHORIZED");
+    throw new Error(UNAUTHORIZED_ERROR_MESSAGE);
   }
   return user;
 }
@@ -51,5 +56,3 @@ export async function requireAuthenticatedUserOrRedirect(
   }
   return user;
 }
-
-

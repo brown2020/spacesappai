@@ -8,7 +8,7 @@ import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { AI_PROMPTS } from "@/constants";
 import { errorResponse } from "@/lib/action-utils";
-import { requireAuthenticatedUser } from "@/lib/firebase-session";
+import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import type { AIModelName, ActionResponse } from "@/types";
 
 // ============================================================================
@@ -182,7 +182,7 @@ export async function generateSummary(
     return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
   } catch (error) {
     console.error("[generateSummary] Error:", error);
-    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    if (isUnauthorizedError(error)) {
       return errorResponse("UNAUTHORIZED", "Please sign in to use AI features.");
     }
     return errorResponse(
@@ -227,7 +227,7 @@ export async function generateAnswer(
     );
   } catch (error) {
     console.error("[generateAnswer] Error:", error);
-    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    if (isUnauthorizedError(error)) {
       return errorResponse("UNAUTHORIZED", "Please sign in to use AI features.");
     }
     return errorResponse(

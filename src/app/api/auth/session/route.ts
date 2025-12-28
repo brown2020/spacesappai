@@ -4,6 +4,12 @@ import { SESSION_COOKIE_NAME } from "@/lib/firebase-session";
 import { isProd } from "@/lib/env";
 
 const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: "lax" as const,
+  path: "/",
+} as const;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as
@@ -30,10 +36,7 @@ export async function POST(req: Request) {
   );
 
   res.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: Math.floor(FIVE_DAYS_MS / 1000),
   });
 
@@ -47,14 +50,9 @@ export async function DELETE() {
   );
 
   res.cookies.set(SESSION_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: 0,
   });
 
   return res;
 }
-
-
