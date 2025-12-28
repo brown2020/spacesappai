@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
-import { getUserInfo } from "@/lib/auth-utils";
+import { requireAuthenticatedUser } from "@/lib/firebase-session";
 
 // ============================================================================
 // TYPES
@@ -61,8 +60,7 @@ function apiErrorResponse(
 export async function POST(req: NextRequest) {
   try {
     // Authenticate the user
-    const { userId, sessionClaims } = await auth.protect();
-    const userInfo = getUserInfo(sessionClaims);
+    const user = await requireAuthenticatedUser();
 
     // Parse request body
     let body: AuthRequestBody;
@@ -85,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check room access (efficient single document lookup)
-    const hasAccess = await hasRoomAccess(userId, roomId);
+    const hasAccess = await hasRoomAccess(user.uid, roomId);
 
     if (!hasAccess) {
       return apiErrorResponse(
@@ -96,11 +94,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Prepare Liveblocks session
-    const session = liveblocks.prepareSession(userId, {
+    const session = liveblocks.prepareSession(user.uid, {
       userInfo: {
-        name: userInfo.name,
-        email: userInfo.email,
-        avatar: userInfo.avatar,
+        name: user.name ?? "Anonymous",
+        email: user.email ?? "anonymous",
+        avatar: user.picture ?? "",
       },
     });
 

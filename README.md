@@ -123,7 +123,6 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 | ---------------------------------------- | ------- | ------------------------ |
 | [Vercel AI SDK](https://sdk.vercel.ai/)  | 5.0.44  | AI streaming & providers |
 | [Firebase](https://firebase.google.com/) | 12.2.1  | Database & storage       |
-| [Clerk](https://clerk.com/)              | 6.0.2   | Authentication           |
 
 ### UI & Styling
 
@@ -143,7 +142,6 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 
 - **Node.js** 18.17 or later
 - **npm** 9.0 or later (or pnpm/yarn)
-- A [Clerk](https://clerk.com/) account (authentication)
 - A [Liveblocks](https://liveblocks.io/) account (real-time)
 - A [Firebase](https://firebase.google.com/) project (database)
 - At least one AI provider API key
@@ -184,14 +182,6 @@ npm run dev
 ## 🔐 Environment Variables
 
 Create a `.env.local` file with the following variables:
-
-### Authentication (Required)
-
-```bash
-# Clerk - https://clerk.com/docs/quickstarts/nextjs
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-```
 
 ### Real-time Collaboration (Required)
 
@@ -324,13 +314,16 @@ src/
 ### Authentication Flow
 
 ```
-User ──▶ Clerk Auth ──▶ Session Claims ──▶ Liveblocks Auth Endpoint
-                                                    │
-                                                    ▼
-                                          Firebase Room Access Check
-                                                    │
-                                                    ▼
-                                          Liveblocks Session Token
+User ──▶ Firebase Auth ──▶ ID Token ──▶ /api/auth/session (HttpOnly cookie)
+                                           │
+                                           ▼
+                                 Liveblocks Auth Endpoint
+                                           │
+                                           ▼
+                                Firebase Room Access Check
+                                           │
+                                           ▼
+                                Liveblocks Session Token
 ```
 
 ### Firestore Data Model
@@ -343,7 +336,7 @@ documents/
     └── updatedAt: timestamp
 
 users/
-└── {userEmail}/
+└── {uid}/
     └── rooms/
         └── {documentId}/
             ├── roomId: string
@@ -424,7 +417,7 @@ import ClientOnly from "@/components/ClientOnly";
 <summary><strong>Liveblocks authentication fails</strong></summary>
 
 1. Check that `LIVEBLOCKS_PRIVATE_KEY` is set correctly
-2. Verify Clerk session claims include email
+2. Verify you are signed in (Header should show your avatar + “Sign Out”)
 3. Check the auth endpoint logs at `/api/auth-endpoint`
 
 </details>
@@ -459,7 +452,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 - [BlockNote](https://blocknotejs.org/) — Amazing open-source editor
 - [Liveblocks](https://liveblocks.io/) — Real-time infrastructure
-- [Clerk](https://clerk.com/) — Authentication made simple
 - [Vercel AI SDK](https://sdk.vercel.ai/) — Unified AI interface
 - [Shadcn UI](https://ui.shadcn.com/) — Beautiful UI components
 

@@ -19,13 +19,31 @@ import {
 // ============================================================================
 
 function SidebarMenuContent() {
-  const { documents, isEmpty } = useUserDocuments();
+  const { documents, isEmpty, isLoading, error } = useUserDocuments();
 
   return (
     <div className="flex flex-col gap-4">
       <NewDocumentButton />
 
       <nav className="flex flex-col gap-4 md:max-w-36">
+        {isLoading && (
+          <p className="text-gray-500 text-sm">Loading documents…</p>
+        )}
+
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 p-3">
+            <p className="text-red-700 text-sm font-medium">
+              Failed to load documents
+            </p>
+            <p className="text-red-700/80 text-xs mt-1 break-words">
+              {error.message}
+            </p>
+            <p className="text-red-700/80 text-xs mt-2">
+              If this is “permission-denied”, deploy `firestore.rules` to your Firebase project.
+            </p>
+          </div>
+        )}
+
         {/* My Documents Section */}
         <section>
           <h2 className="text-gray-500 font-semibold text-sm mb-2">

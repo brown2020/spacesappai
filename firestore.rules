@@ -27,7 +27,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Get the user's uid from auth token (Firebase Auth custom token uid = Clerk userId)
+    // Get the user's uid from auth token
     function getUserId() {
       return request.auth.uid;
     }

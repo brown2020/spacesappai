@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { collectionGroup, query, where } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
-import { useUser } from "@clerk/nextjs";
-import { COLLECTIONS, db } from "@/firebase/firebaseConfig";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { COLLECTIONS, db, auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import type { GroupedRoomDocuments, RoomDocument } from "@/types";
 
 interface UseUserDocumentsReturn {
@@ -19,15 +19,14 @@ interface UseUserDocumentsReturn {
  * Groups documents by role (owner vs editor)
  */
 export function useUserDocuments(): UseUserDocumentsReturn {
-  const { user } = useUser();
-  const currentUserId = user?.id;
+  const [user] = useAuthState(firebaseAuth);
+  const currentUserId = user?.uid;
 
   const roomsQuery = useMemo(() => {
     if (!currentUserId) return null;
-    return query(
-      collectionGroup(db, COLLECTIONS.ROOMS),
-      where("userId", "==", currentUserId)
-    );
+    // Read only the current user's rooms (no collectionGroup needed).
+    const roomsRef = collection(db, COLLECTIONS.USERS, currentUserId, COLLECTIONS.ROOMS);
+    return query(roomsRef);
   }, [currentUserId]);
 
   const [snapshot, isLoading, error] = useCollection(roomsQuery);

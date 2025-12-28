@@ -1,20 +1,5 @@
 import { DocumentData } from "firebase/firestore";
 
-// ============================================================================
-// USER TYPES
-// ============================================================================
-
-/**
- * User information from Clerk JWT session claims
- */
-export interface User {
-  email: string;
-  image: string;
-  fullName: string;
-  firstName: string;
-  lastName: string;
-}
-
 /**
  * Liveblocks user info for real-time presence
  */

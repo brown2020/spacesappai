@@ -16,7 +16,6 @@
     "@ai-sdk/rsc": "^2.0.3",
     "@blocknote/core": "^0.45.0",
     "@blocknote/shadcn": "^0.45.0",
-    "@clerk/nextjs": "^6.0.2",
     "@liveblocks/client": "^3.7.1",
     "@liveblocks/node": "^3.7.1",
     "@liveblocks/react": "^3.7.1",

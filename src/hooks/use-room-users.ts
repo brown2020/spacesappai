@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { collectionGroup, query, where } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
-import { useUser } from "@clerk/nextjs";
-import { COLLECTIONS, db } from "@/firebase/firebaseConfig";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { COLLECTIONS, db, auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import type { RoomDocument } from "@/types";
 
 interface UseRoomUsersReturn {
@@ -18,7 +18,7 @@ interface UseRoomUsersReturn {
  * Hook for fetching users in a room
  */
 export function useRoomUsers(roomId: string): UseRoomUsersReturn {
-  const { user } = useUser();
+  const [user] = useAuthState(firebaseAuth);
   const isSignedIn = !!user;
 
   const roomsQuery = useMemo(() => {
@@ -40,7 +40,7 @@ export function useRoomUsers(roomId: string): UseRoomUsersReturn {
     })) as RoomDocument[];
   }, [snapshot]);
 
-  const currentUserId = user?.id;
+  const currentUserId = user?.uid;
 
   return {
     users,

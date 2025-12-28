@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
 import RoomProvider from "@/components/RoomProvider";
+import { requireAuthenticatedUserOrRedirect } from "@/lib/firebase-session";
 
 // ============================================================================
 // TYPES
@@ -21,8 +21,8 @@ export default async function DocumentLayout({
   // Resolve async params (Next.js 16 pattern)
   const { id } = await params;
 
-  // Protect this route - requires authentication
-  await auth.protect();
+  // Protect this route - requires authentication (server session cookie)
+  await requireAuthenticatedUserOrRedirect(`/?redirect=${encodeURIComponent(`/doc/${id}`)}`);
 
   return <RoomProvider roomId={id}>{children}</RoomProvider>;
 }

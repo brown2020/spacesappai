@@ -1,57 +1,65 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
-import { signInWithCustomToken, signOut } from "firebase/auth";
+import { onIdTokenChanged } from "firebase/auth";
 import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import { migrateUserRoomsToUid } from "@/lib/migrations";
 
-async function fetchFirebaseCustomToken(): Promise<string> {
-  const res = await fetch("/api/firebase-token", { method: "POST" });
-  if (!res.ok) throw new Error("Failed to fetch Firebase token");
-  const data = (await res.json()) as { token?: string };
-  if (!data.token) throw new Error("Firebase token missing");
-  return data.token;
+async function setServerSessionFromIdToken(idToken: string): Promise<void> {
+  const res = await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!res.ok) throw new Error("Failed to create session");
+}
+
+async function clearServerSession(): Promise<void> {
+  await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
 }
 
 export default function FirebaseAuthBridge() {
-  const { isLoaded, isSignedIn, user } = useUser();
   const hasAuthedRef = useRef(false);
   const isInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
-
-    // When signed out of Clerk, also sign out of Firebase Auth.
-    if (!isSignedIn) {
-      hasAuthedRef.current = false;
-      isInFlightRef.current = false;
-      void signOut(firebaseAuth).catch(() => undefined);
-      return;
-    }
-
-    // Signed in but no user object yet.
-    if (!user) return;
-
-    if (hasAuthedRef.current || isInFlightRef.current) return;
-    isInFlightRef.current = true;
-
-    void (async () => {
-      try {
-        const token = await fetchFirebaseCustomToken();
-        await signInWithCustomToken(firebaseAuth, token);
-
-        // One-time migration: move legacy rooms from users/{email} -> users/{uid}
-        await migrateUserRoomsToUid();
-
-        hasAuthedRef.current = true;
-      } finally {
+    const unsubscribe = onIdTokenChanged(firebaseAuth, (user) => {
+      // Signed out
+      if (!user) {
+        hasAuthedRef.current = false;
         isInFlightRef.current = false;
+        void clearServerSession();
+        return;
       }
-    })();
-  }, [isLoaded, isSignedIn, user]);
+
+      if (hasAuthedRef.current || isInFlightRef.current) return;
+      isInFlightRef.current = true;
+
+      void (async () => {
+        try {
+          const idToken = await user.getIdToken();
+          await setServerSessionFromIdToken(idToken);
+
+          // One-time migration: move legacy rooms from users/{email} -> users/{uid}
+          try {
+            await migrateUserRoomsToUid();
+          } catch (err) {
+            // Migration is best-effort; never block app boot on it.
+            console.warn(
+              "[FirebaseAuthBridge] migrateUserRoomsToUid failed:",
+              err
+            );
+          }
+
+          hasAuthedRef.current = true;
+        } finally {
+          isInFlightRef.current = false;
+        }
+      })();
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return null;
 }
-
-

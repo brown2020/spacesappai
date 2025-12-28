@@ -1,10 +1,9 @@
 "use server";
 
-import { auth, clerkClient } from "@clerk/nextjs/server";
-import { adminDb } from "@/firebase/firebaseAdmin";
+import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
-import { getUserEmail } from "@/lib/auth-utils";
+import { requireAuthenticatedUser } from "@/lib/firebase-session";
 import { errorResponse, successResponse } from "@/lib/action-utils";
 import type { ActionResponse, CreateDocumentResponse } from "@/types";
 
@@ -20,8 +19,7 @@ export async function createNewDocument(): Promise<
   ActionResponse<CreateDocumentResponse>
 > {
   try {
-    const { userId, sessionClaims } = await auth.protect();
-    const email = getUserEmail(sessionClaims);
+    const user = await requireAuthenticatedUser();
 
     // Use transaction for atomic operation
     const docId = await adminDb.runTransaction(async (transaction) => {
@@ -37,13 +35,13 @@ export async function createNewDocument(): Promise<
       // Create room entry for the owner
       const roomRef = adminDb
         .collection(COLLECTIONS.USERS)
-        .doc(userId)
+        .doc(user.uid)
         .collection(COLLECTIONS.ROOMS)
         .doc(docRef.id);
 
       transaction.set(roomRef, {
-        userId,
-        userEmail: email === "anonymous" ? undefined : email,
+        userId: user.uid,
+        userEmail: user.email ?? undefined,
         role: "owner",
         createdAt: new Date(),
         roomId: docRef.id,
@@ -55,6 +53,12 @@ export async function createNewDocument(): Promise<
     return successResponse({ docId });
   } catch (error) {
     console.error("[createNewDocument] Error:", error);
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return errorResponse<CreateDocumentResponse>(
+        "UNAUTHORIZED",
+        "Please sign in to create a document."
+      );
+    }
     return errorResponse<CreateDocumentResponse>(
       "INTERNAL_ERROR",
       "Failed to create document. Please try again."
@@ -135,14 +139,14 @@ export async function deleteDocument(
   roomId: string
 ): Promise<ActionResponse<void>> {
   try {
-    const { userId } = await auth.protect();
+    const user = await requireAuthenticatedUser();
 
     // Use transaction to verify ownership and delete the document atomically
     await adminDb.runTransaction(async (transaction) => {
       // Check ownership within the transaction
       const ownerRoomRef = adminDb
         .collection(COLLECTIONS.USERS)
-        .doc(userId)
+        .doc(user.uid)
         .collection(COLLECTIONS.ROOMS)
         .doc(roomId);
 
@@ -179,6 +183,9 @@ export async function deleteDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
+      if (error.message === "UNAUTHORIZED") {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
       if (error.message === "FORBIDDEN") {
         return errorResponse(
           "FORBIDDEN",
@@ -207,8 +214,8 @@ export async function inviteUserToDocument(
   email: string
 ): Promise<ActionResponse<void>> {
   try {
-    const { userId: currentUserId, sessionClaims } = await auth.protect();
-    const currentUserEmail = getUserEmail(sessionClaims);
+    const currentUser = await requireAuthenticatedUser();
+    const currentUserEmail = (currentUser.email ?? "").toLowerCase();
 
     // Validate email
     if (!email || !email.includes("@")) {
@@ -218,22 +225,19 @@ export async function inviteUserToDocument(
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Resolve invitee Clerk userId from email (Option A: uid-based access)
-    const client = await clerkClient();
-    const users = await client.users.getUserList({
-      emailAddress: [normalizedEmail],
-      limit: 1,
-    });
-    const invitee = users.data?.[0];
+    // Resolve invitee Firebase uid from email (invitee must already exist in Firebase Auth)
+    const invitee = await adminAuth
+      .getUserByEmail(normalizedEmail)
+      .catch(() => null);
     if (!invitee) {
       return errorResponse(
         "NOT_FOUND",
-        "No Clerk user found with that email address."
+        "No Firebase user found with that email address."
       );
     }
 
     // Prevent self-invite (uid-based)
-    if (invitee.id === currentUserId || normalizedEmail === currentUserEmail) {
+    if (invitee.uid === currentUser.uid || normalizedEmail === currentUserEmail) {
       return errorResponse("VALIDATION_ERROR", "You cannot invite yourself.");
     }
 
@@ -242,7 +246,7 @@ export async function inviteUserToDocument(
       // Check if current user is the owner
       const ownerRoomRef = adminDb
         .collection(COLLECTIONS.USERS)
-        .doc(currentUserId)
+        .doc(currentUser.uid)
         .collection(COLLECTIONS.ROOMS)
         .doc(roomId);
 
@@ -255,7 +259,7 @@ export async function inviteUserToDocument(
       // Check if user already has access (within the transaction)
       const inviteeRoomRef = adminDb
         .collection(COLLECTIONS.USERS)
-        .doc(invitee.id)
+        .doc(invitee.uid)
         .collection(COLLECTIONS.ROOMS)
         .doc(roomId);
 
@@ -267,7 +271,7 @@ export async function inviteUserToDocument(
 
       // Create room entry for the invited user
       transaction.set(inviteeRoomRef, {
-        userId: invitee.id,
+        userId: invitee.uid,
         userEmail: normalizedEmail,
         role: "editor",
         createdAt: new Date(),
@@ -281,6 +285,9 @@ export async function inviteUserToDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
+      if (error.message === "UNAUTHORIZED") {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
       if (error.message === "FORBIDDEN") {
         return errorResponse(
           "FORBIDDEN",
@@ -312,10 +319,10 @@ export async function removeUserFromDocument(
   userIdToRemove: string
 ): Promise<ActionResponse<void>> {
   try {
-    const { userId: currentUserId } = await auth.protect();
+    const currentUser = await requireAuthenticatedUser();
 
     // Prevent owner from removing themselves
-    if (userIdToRemove === currentUserId) {
+    if (userIdToRemove === currentUser.uid) {
       return errorResponse(
         "VALIDATION_ERROR",
         "You cannot remove yourself. Delete the document instead."
@@ -327,7 +334,7 @@ export async function removeUserFromDocument(
       // Check if current user is the owner
       const ownerRoomRef = adminDb
         .collection(COLLECTIONS.USERS)
-        .doc(currentUserId)
+        .doc(currentUser.uid)
         .collection(COLLECTIONS.ROOMS)
         .doc(roomId);
 
@@ -360,6 +367,9 @@ export async function removeUserFromDocument(
 
     // Handle specific error types
     if (error instanceof Error) {
+      if (error.message === "UNAUTHORIZED") {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
       if (error.message === "FORBIDDEN") {
         return errorResponse(
           "FORBIDDEN",
