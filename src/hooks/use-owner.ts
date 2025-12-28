@@ -2,7 +2,11 @@
 
 import { useMemo } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
-import { useRoomUsers } from "./use-room-users";
+import { doc } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { useDocument } from "react-firebase-hooks/firestore";
+import { auth as firebaseAuth, COLLECTIONS, db } from "@/firebase/firebaseConfig";
+import type { RoomDocument, RoomRole } from "@/types";
 
 interface UseOwnerReturn {
   /** Whether the current user is the owner. Note: returns false while loading */
@@ -30,21 +34,44 @@ interface UseOwnerReturn {
  */
 export function useOwner(): UseOwnerReturn {
   const room = useRoom();
-  const { users, isLoading, currentUserId } = useRoomUsers(room.id);
+  const [user, isAuthLoading, authError] = useAuthState(firebaseAuth);
 
-  const isOwner = useMemo(() => {
-    // Return false during loading - consumers should check isLoading/isReady
-    if (isLoading || !currentUserId || users.length === 0) return false;
+  const roomRef = useMemo(() => {
+    if (!user) return null;
+    return doc(db, COLLECTIONS.USERS, user.uid, COLLECTIONS.ROOMS, room.id);
+  }, [room.id, user]);
 
-    return users.some(
-      (user) => user.role === "owner" && user.userId === currentUserId
-    );
-  }, [users, currentUserId, isLoading]);
+  const [roomSnap, isRoomLoading, roomError] = useDocument(roomRef);
 
-  return { 
-    isOwner, 
-    isLoading,
-    isReady: !isLoading && !!currentUserId,
-  };
+  const role = (roomSnap?.data() as RoomDocument | undefined)?.role as
+    | RoomRole
+    | undefined;
+
+  const isOwner = role === "owner";
+  const isLoading = isAuthLoading || isRoomLoading;
+  const isReady = !isLoading && !!user && !authError && !roomError;
+
+  // Optional debug (client-only)
+  if (
+    process.env.NODE_ENV !== "production" &&
+    typeof window !== "undefined" &&
+    window.location.search.includes("debugOwner=1")
+  ) {
+    // eslint-disable-next-line no-console
+    console.log("[useOwner]", {
+      roomId: room.id,
+      uid: user?.uid ?? null,
+      isAuthLoading,
+      isRoomLoading,
+      authError: authError ? String(authError) : null,
+      roomError: roomError ? String(roomError) : null,
+      roomDocExists: roomSnap?.exists() ?? null,
+      role: role ?? null,
+      isOwner,
+      isReady,
+    });
+  }
+
+  return { isOwner, isLoading, isReady };
 }
 
