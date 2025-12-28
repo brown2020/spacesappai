@@ -24,7 +24,7 @@
   <img src="https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=flat-square&logo=tailwind-css" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License" />
 </p>
 
 ---
@@ -105,7 +105,7 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 
 | Technology                                | Version | Purpose                         |
 | ----------------------------------------- | ------- | ------------------------------- |
-| [Next.js](https://nextjs.org/)            | 16.0.3  | React framework with App Router |
+| [Next.js](https://nextjs.org/)            | 16.1.1  | React framework with App Router |
 | [React](https://react.dev/)               | 19.0.0  | UI library                      |
 | [TypeScript](https://typescriptlang.org/) | 5.6.2   | Type safety                     |
 
@@ -113,16 +113,17 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 
 | Technology                            | Version | Purpose                     |
 | ------------------------------------- | ------- | --------------------------- |
-| [Liveblocks](https://liveblocks.io/)  | 3.7.1   | Real-time infrastructure    |
+| [Liveblocks](https://liveblocks.io/)  | 3.12.1  | Real-time infrastructure    |
 | [Yjs](https://yjs.dev/)               | 13.6.19 | CRDT for conflict-free sync |
-| [BlockNote](https://blocknotejs.org/) | 0.44.1  | Rich text editor            |
+| [BlockNote](https://blocknotejs.org/) | 0.45.0  | Rich text editor            |
 
 ### AI & Backend
 
 | Technology                               | Version | Purpose                  |
 | ---------------------------------------- | ------- | ------------------------ |
-| [Vercel AI SDK](https://sdk.vercel.ai/)  | 5.0.44  | AI streaming & providers |
-| [Firebase](https://firebase.google.com/) | 12.2.1  | Database & storage       |
+| [Vercel AI SDK](https://sdk.vercel.ai/)  | 6.0.3   | AI streaming & providers |
+| [Firebase](https://firebase.google.com/) | 12.7.0  | Database & storage       |
+| [Firebase Admin](https://firebase.google.com/docs/admin/setup) | 13.0.1 | Server auth & Firestore  |
 
 ### UI & Styling
 
@@ -131,7 +132,7 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 | [Tailwind CSS](https://tailwindcss.com/)    | 4.0.9   | Utility-first CSS     |
 | [Radix UI](https://radix-ui.com/)           | Latest  | Accessible primitives |
 | [Framer Motion](https://framer.com/motion/) | 12.4.7  | Animations            |
-| [Lucide](https://lucide.dev/)               | 0.559.0 | Icons                 |
+| [Lucide](https://lucide.dev/)               | 0.562.0 | Icons                 |
 | [Sonner](https://sonner.emilkowal.ski/)     | 2.0.1   | Toast notifications   |
 
 ---
@@ -140,7 +141,7 @@ English, French, Spanish, German, Italian, Portuguese, Chinese, Russian, Hindi, 
 
 ### Prerequisites
 
-- **Node.js** 18.17 or later
+- **Node.js** 20.9 or later (required by Next.js 16.1.1)
 - **npm** 9.0 or later (or pnpm/yarn)
 - A [Liveblocks](https://liveblocks.io/) account (real-time)
 - A [Firebase](https://firebase.google.com/) project (database)
@@ -235,6 +236,13 @@ MISTRAL_API_KEY=...
 FIREWORKS_API_KEY=...
 ```
 
+### Optional (Debug)
+
+```bash
+# Logs room ownership self-heal decisions on the server (dev only)
+ROOM_OWNERSHIP_DEBUG=1
+```
+
 ---
 
 ## 📁 Project Structure
@@ -275,7 +283,10 @@ src/
 ├── lib/                      # Utilities & server actions
 │   ├── documentActions.ts    # Document CRUD operations
 │   ├── generateActions.ts    # AI generation actions
-│   ├── auth-utils.ts         # Auth helpers
+│   ├── firebase-session.ts   # Server session + auth helpers (cookie -> user)
+│   ├── room-ownership.ts     # Targeted self-heal for corrupted room ownership
+│   ├── migrations.ts         # Best-effort legacy room migrations
+│   ├── action-utils.ts       # Consistent server-action responses
 │   ├── document-utils.ts     # Document helpers
 │   └── ...
 │
@@ -440,11 +451,29 @@ See [firestore.rules](./firestore.rules) and [storage.rules](./storage.rules) fo
 
 </details>
 
+<details>
+<summary><strong>Migration warns about missing index (FAILED_PRECONDITION)</strong></summary>
+
+On first sign-in, the app runs a best-effort migration (`migrateUserRoomsToUid`) that may query a collection group index on `rooms.userEmail`.
+
+If you see:
+
+- `Skipping collectionGroup userEmail migration (likely missing index): FAILED_PRECONDITION`
+
+You can either ignore it (the app still works), or create the index:
+
+- **Collection**: `rooms` (collection group)
+- **Fields**: `userEmail` (Ascending)
+
+</details>
+
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see [LICENSE.md](./LICENSE.md) for the full license text.
+
+> Note: AGPL includes network-use/source-availability requirements when you run modified versions as a service. If you're unsure how this impacts your use case, please review the license terms.
 
 ---
 
