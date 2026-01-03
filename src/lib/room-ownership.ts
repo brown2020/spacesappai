@@ -87,9 +87,8 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
 
   // If only legacy owners exist, only promote the current user when there's strong evidence
   // they were the legacy owner (by email).
-  let matchedLegacyOwner:
-    | FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
-    | null = null;
+  let matchedLegacyParentUserDocId: string | null = null;
+  let matchedLegacyData: Record<string, unknown> | null = null;
   if (!ownerCandidates.empty && email) {
     const isLegacyOwnerForCurrentUser = ownerCandidates.docs.some((doc) => {
       const data = doc.data() as Record<string, unknown>;
@@ -99,12 +98,13 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
       const docUserId = typeof data.userId === "string" ? data.userId : "";
 
       const isMatch =
-        (
         parentUserDocId.toLowerCase() === email ||
         docUserEmail === email ||
-        docUserId.toLowerCase() === email
-      );
-      if (isMatch) matchedLegacyOwner = doc;
+        docUserId.toLowerCase() === email;
+      if (isMatch) {
+        matchedLegacyParentUserDocId = doc.ref.parent.parent?.id ?? null;
+        matchedLegacyData = data;
+      }
       return isMatch;
     });
 
@@ -112,7 +112,7 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
       console.info("[ensureRoomHasOwner] legacy-owner-match", {
         roomId,
         isLegacyOwnerForCurrentUser,
-        matchedLegacyParentUserDocId: matchedLegacyOwner?.ref.parent.parent?.id ?? null,
+        matchedLegacyParentUserDocId,
       });
     }
 
@@ -129,7 +129,7 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
   if (!currentUserRoomSnap.exists) {
     // If the uid-keyed entry doesn't exist but we matched a legacy owner doc to this user,
     // create the uid-keyed owner entry to restore expected behavior.
-    if (!matchedLegacyOwner) {
+    if (!matchedLegacyData) {
       if (shouldDebug) {
         console.info("[ensureRoomHasOwner] uid-room-missing-no-legacy-match", {
           roomId,
@@ -139,7 +139,10 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
       return;
     }
 
-    const legacyData = matchedLegacyOwner.data() as Record<string, unknown>;
+    // TS note: matchedLegacyData is assigned inside a callback. Some TS control-flow
+    // paths don't narrow it reliably under Next's build typecheck, so we assert here.
+    const legacyData = matchedLegacyData as Record<string, unknown>;
+
     await currentUserRoomRef.set(
       {
         ...legacyData,
@@ -178,5 +181,3 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
     });
   }
 }
-
-
