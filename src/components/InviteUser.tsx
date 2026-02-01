@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRoomId } from "@/hooks";
 import { inviteUserToDocument } from "@/lib/documentActions";
-import { isValidEmail } from "@/lib/utils";
+import { isValidEmail, normalizeEmail, cn } from "@/lib/utils";
+import { AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,7 +46,7 @@ export default function InviteUser() {
     startTransition(async () => {
       const { success, error: actionError } = await inviteUserToDocument(
         roomId,
-        email.toLowerCase().trim()
+        normalizeEmail(email)
       );
 
       if (success) {
@@ -94,9 +95,16 @@ export default function InviteUser() {
               disabled={isPending}
               aria-invalid={!!error}
               aria-describedby={error ? "email-error" : undefined}
+              className={cn(
+                error && "border-destructive focus-visible:ring-destructive"
+              )}
             />
             {error && (
-              <p id="email-error" className="text-sm text-red-500">
+              <p
+                id="email-error"
+                className="flex items-center gap-1.5 text-sm text-destructive"
+              >
+                <AlertCircle className="h-4 w-4" />
                 {error}
               </p>
             )}

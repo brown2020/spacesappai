@@ -38,6 +38,8 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Track if component is mounted to prevent state updates after unmount
   const isMountedRef = useIsMounted();
+  // Track current title value to avoid stale closures in updateTitle callback
+  const titleRef = useRef(title);
 
   // Sync title with Firestore data only on initial load
   // or when the remote title changes AND user hasn't edited
@@ -70,6 +72,11 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     };
   }, [documentId]);
 
+  // Keep titleRef in sync with title state
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
+
   // Wrapper for setTitle that tracks user edits
   const handleSetTitle = useCallback((newTitle: string) => {
     hasUserEditedRef.current = true;
@@ -77,7 +84,8 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
   }, []);
 
   const updateTitle = useCallback(async () => {
-    const trimmedTitle = title.trim();
+    // Use ref to get current title value (avoids stale closure)
+    const trimmedTitle = titleRef.current.trim();
     if (!trimmedTitle || isUpdating) return;
 
     setIsUpdating(true);
@@ -94,7 +102,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
       // Re-throw so caller can handle if needed
       throw err;
     } finally {
-      // Only update state if still mounted
+      // Only update state if still mounted (isMountedRef is stable, not in deps)
       if (isMountedRef.current) {
         setIsUpdating(false);
       }
@@ -109,7 +117,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [docRef, title, isUpdating, isMountedRef]);
+  }, [docRef, isUpdating]);
 
   return {
     title,

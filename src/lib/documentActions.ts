@@ -2,9 +2,12 @@
 
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { FIRESTORE } from "@/constants";
 import { liveblocks } from "@/lib/liveblocks";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import { errorResponse, successResponse } from "@/lib/action-utils";
+import { getUserRoomRef, getDocumentRef, verifyOwnership } from "@/lib/firestore-helpers";
+import { normalizeEmail } from "@/lib/utils";
 import type { ActionResponse, CreateDocumentResponse } from "@/types";
 
 // ============================================================================
@@ -72,14 +75,13 @@ export async function createNewDocument(): Promise<
  * in transaction isolation by using a loop to ensure all entries are deleted
  */
 async function deleteAllRoomEntries(roomId: string): Promise<void> {
-  const BATCH_SIZE = 500;
   let hasMoreRooms = true;
 
   while (hasMoreRooms) {
     const roomsQuery = await adminDb
       .collectionGroup(COLLECTIONS.ROOMS)
       .where("roomId", "==", roomId)
-      .limit(BATCH_SIZE)
+      .limit(FIRESTORE.BATCH_SIZE)
       .get();
 
     if (roomsQuery.empty) {
@@ -96,13 +98,10 @@ async function deleteAllRoomEntries(roomId: string): Promise<void> {
  * Delete a Liveblocks room with retry logic
  * Retries up to 3 times with exponential backoff
  */
-async function deleteLiveblocksRoomWithRetry(
-  roomId: string,
-  maxRetries = 3
-): Promise<void> {
+async function deleteLiveblocksRoomWithRetry(roomId: string): Promise<void> {
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 1; attempt <= FIRESTORE.MAX_RETRIES; attempt++) {
     try {
       await liveblocks.deleteRoom(roomId);
       return; // Success
@@ -115,9 +114,9 @@ async function deleteLiveblocksRoomWithRetry(
       }
 
       // Exponential backoff: 100ms, 200ms, 400ms
-      if (attempt < maxRetries) {
+      if (attempt < FIRESTORE.MAX_RETRIES) {
         await new Promise((resolve) =>
-          setTimeout(resolve, 100 * Math.pow(2, attempt - 1))
+          setTimeout(resolve, FIRESTORE.RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1))
         );
       }
     }
@@ -125,7 +124,7 @@ async function deleteLiveblocksRoomWithRetry(
 
   // Log after all retries exhausted
   console.warn(
-    `[deleteDocument] Liveblocks room deletion failed after ${maxRetries} attempts:`,
+    `[deleteDocument] Liveblocks room deletion failed after ${FIRESTORE.MAX_RETRIES} attempts:`,
     lastError
   );
 }
@@ -144,20 +143,10 @@ export async function deleteDocument(
     // Use transaction to verify ownership and delete the document atomically
     await adminDb.runTransaction(async (transaction) => {
       // Check ownership within the transaction
-      const ownerRoomRef = adminDb
-        .collection(COLLECTIONS.USERS)
-        .doc(user.uid)
-        .collection(COLLECTIONS.ROOMS)
-        .doc(roomId);
-
-      const ownerRoomDoc = await transaction.get(ownerRoomRef);
-
-      if (!ownerRoomDoc.exists || ownerRoomDoc.data()?.role !== "owner") {
-        throw new Error("FORBIDDEN");
-      }
+      await verifyOwnership(transaction, user.uid, roomId);
 
       // Get the document to ensure it exists
-      const docRef = adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId);
+      const docRef = getDocumentRef(roomId);
       const docSnapshot = await transaction.get(docRef);
 
       if (!docSnapshot.exists) {
@@ -215,7 +204,7 @@ export async function inviteUserToDocument(
 ): Promise<ActionResponse<void>> {
   try {
     const currentUser = await requireAuthenticatedUser();
-    const currentUserEmail = (currentUser.email ?? "").toLowerCase();
+    const currentUserEmail = normalizeEmail(currentUser.email);
 
     // Validate email
     if (!email || !email.includes("@")) {
@@ -223,7 +212,7 @@ export async function inviteUserToDocument(
     }
 
     // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
 
     // Resolve invitee Firebase uid from email (invitee must already exist in Firebase Auth)
     const invitee = await adminAuth
@@ -244,25 +233,10 @@ export async function inviteUserToDocument(
     // Use transaction to prevent race conditions
     await adminDb.runTransaction(async (transaction) => {
       // Check if current user is the owner
-      const ownerRoomRef = adminDb
-        .collection(COLLECTIONS.USERS)
-        .doc(currentUser.uid)
-        .collection(COLLECTIONS.ROOMS)
-        .doc(roomId);
-
-      const ownerRoomDoc = await transaction.get(ownerRoomRef);
-
-      if (!ownerRoomDoc.exists || ownerRoomDoc.data()?.role !== "owner") {
-        throw new Error("FORBIDDEN");
-      }
+      await verifyOwnership(transaction, currentUser.uid, roomId);
 
       // Check if user already has access (within the transaction)
-      const inviteeRoomRef = adminDb
-        .collection(COLLECTIONS.USERS)
-        .doc(invitee.uid)
-        .collection(COLLECTIONS.ROOMS)
-        .doc(roomId);
-
+      const inviteeRoomRef = getUserRoomRef(invitee.uid, roomId);
       const existingEntry = await transaction.get(inviteeRoomRef);
 
       if (existingEntry.exists) {
@@ -332,25 +306,10 @@ export async function removeUserFromDocument(
     // Use transaction to ensure atomicity
     await adminDb.runTransaction(async (transaction) => {
       // Check if current user is the owner
-      const ownerRoomRef = adminDb
-        .collection(COLLECTIONS.USERS)
-        .doc(currentUser.uid)
-        .collection(COLLECTIONS.ROOMS)
-        .doc(roomId);
-
-      const ownerRoomDoc = await transaction.get(ownerRoomRef);
-
-      if (!ownerRoomDoc.exists || ownerRoomDoc.data()?.role !== "owner") {
-        throw new Error("FORBIDDEN");
-      }
+      await verifyOwnership(transaction, currentUser.uid, roomId);
 
       // Check if the user to remove actually has access
-      const userRoomRef = adminDb
-        .collection(COLLECTIONS.USERS)
-        .doc(userIdToRemove)
-        .collection(COLLECTIONS.ROOMS)
-        .doc(roomId);
-
+      const userRoomRef = getUserRoomRef(userIdToRemove, roomId);
       const userRoomDoc = await transaction.get(userRoomRef);
 
       if (!userRoomDoc.exists) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { collectionGroup, query, where } from "firebase/firestore";
+import { collectionGroup, query, where, limit } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { COLLECTIONS, db, auth as firebaseAuth } from "@/firebase/firebaseConfig";
@@ -14,6 +14,9 @@ interface UseRoomUsersReturn {
   currentUserId: string | undefined;
 }
 
+// Reasonable limit for collaborative documents - prevents memory issues
+const MAX_ROOM_USERS = 100;
+
 /**
  * Hook for fetching users in a room
  */
@@ -25,7 +28,8 @@ export function useRoomUsers(roomId: string): UseRoomUsersReturn {
     if (!isSignedIn) return null;
     return query(
       collectionGroup(db, COLLECTIONS.ROOMS),
-      where("roomId", "==", roomId)
+      where("roomId", "==", roomId),
+      limit(MAX_ROOM_USERS)
     );
   }, [isSignedIn, roomId]);
 

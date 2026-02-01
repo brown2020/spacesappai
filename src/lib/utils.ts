@@ -6,6 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Normalize an email for consistent comparison and storage.
+ * Lowercases and trims whitespace.
+ *
+ * @param email - Email string to normalize (can be null/undefined)
+ * @returns Normalized email or empty string for null/undefined
+ */
+export function normalizeEmail(email: string | null | undefined): string {
+  return (email ?? "").toLowerCase().trim();
+}
+
+/**
  * Validate email format
  * Basic validation that checks for presence of @ and domain
  *

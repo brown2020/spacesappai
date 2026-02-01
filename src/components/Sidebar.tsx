@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MenuIcon } from "lucide-react";
+import { MenuIcon, FileText } from "lucide-react";
 import { useUserDocuments } from "@/hooks";
 import NewDocumentButton from "./NewDocumentButton";
 import SidebarOption from "./SidebarOption";
@@ -15,6 +15,42 @@ import {
 } from "@/components/ui/sheet";
 
 // ============================================================================
+// LOADING SKELETON
+// ============================================================================
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="h-9 bg-muted animate-pulse rounded-md"
+          style={{ animationDelay: `${i * 100}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// EMPTY STATE
+// ============================================================================
+
+function EmptyState() {
+  return (
+    <div className="text-center py-6">
+      <div className="mb-3 inline-flex p-3 rounded-full bg-muted">
+        <FileText className="w-6 h-6 text-muted-foreground" />
+      </div>
+      <p className="text-muted-foreground text-sm mb-4">
+        No documents yet
+      </p>
+      <NewDocumentButton variant="outline" size="sm" />
+    </div>
+  );
+}
+
+// ============================================================================
 // SIDEBAR MENU CONTENT
 // ============================================================================
 
@@ -26,30 +62,30 @@ function SidebarMenuContent() {
       <NewDocumentButton />
 
       <nav className="flex flex-col gap-4 md:max-w-36">
-        {isLoading && (
-          <p className="text-gray-500 text-sm">Loading documents…</p>
-        )}
+        {isLoading && <LoadingSkeleton />}
 
         {error && (
-          <div className="rounded-md bg-red-50 border border-red-200 p-3">
-            <p className="text-red-700 text-sm font-medium">
+          <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+            <p className="text-destructive text-sm font-medium">
               Failed to load documents
             </p>
-            <p className="text-red-700/80 text-xs mt-1 break-words">
+            <p className="text-destructive/80 text-xs mt-1 break-words">
               {error.message}
             </p>
-            <p className="text-red-700/80 text-xs mt-2">
-              If this is “permission-denied”, deploy `firestore.rules` to your Firebase project.
+            <p className="text-destructive/80 text-xs mt-2">
+              If this is &quot;permission-denied&quot;, deploy `firestore.rules` to your Firebase project.
             </p>
           </div>
         )}
 
+        {!isLoading && !error && isEmpty && <EmptyState />}
+
         {/* My Documents Section */}
-        <section>
-          <h2 className="text-gray-500 font-semibold text-sm mb-2">
-            My Documents
-          </h2>
-          {documents.owner.length > 0 ? (
+        {!isLoading && documents.owner.length > 0 && (
+          <section>
+            <h2 className="text-muted-foreground font-semibold text-sm mb-2">
+              My Documents
+            </h2>
             <ul className="flex flex-col gap-2">
               {documents.owner.map((doc) =>
                 doc.id ? (
@@ -59,15 +95,13 @@ function SidebarMenuContent() {
                 ) : null
               )}
             </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No documents yet</p>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Shared With Me Section */}
-        {documents.editor.length > 0 && (
+        {!isLoading && documents.editor.length > 0 && (
           <section>
-            <h2 className="text-gray-500 font-semibold text-sm mb-2">
+            <h2 className="text-muted-foreground font-semibold text-sm mb-2">
               Shared with me
             </h2>
             <ul className="flex flex-col gap-2">
@@ -81,12 +115,6 @@ function SidebarMenuContent() {
             </ul>
           </section>
         )}
-
-        {isEmpty && (
-          <p className="text-gray-400 text-sm italic">
-            Create your first document to get started
-          </p>
-        )}
       </nav>
     </div>
   );
@@ -99,7 +127,7 @@ function SidebarMenuContent() {
 function MenuButtonPlaceholder() {
   return (
     <button
-      className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
+      className="p-2 hover:bg-muted rounded-lg transition-colors"
       aria-label="Open menu"
     >
       <MenuIcon size={24} />
@@ -118,7 +146,7 @@ function MobileSidebar() {
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <button
-          className="p-2 hover:bg-gray-300 rounded-lg transition-colors"
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
           aria-label="Open menu"
         >
           <MenuIcon size={24} />
@@ -143,7 +171,7 @@ function MobileSidebar() {
 
 export default function Sidebar() {
   return (
-    <aside className="p-2 md:p-5 bg-gray-200 relative shrink-0">
+    <aside className="p-2 md:p-5 bg-muted relative shrink-0">
       {/* Mobile: Sheet drawer - wrapped in ClientOnly to prevent hydration mismatch */}
       <div className="md:hidden">
         <ClientOnly fallback={<MenuButtonPlaceholder />}>

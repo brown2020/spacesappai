@@ -6,33 +6,10 @@ import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
-import { AI_PROMPTS } from "@/constants";
+import { AI_PROMPTS, AI_LIMITS } from "@/constants";
 import { errorResponse } from "@/lib/action-utils";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import type { AIModelName, ActionResponse } from "@/types";
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Maximum document length in characters for AI processing
- * Modern models support large contexts:
- * - GPT-4o: 128K tokens (~512K chars)
- * - Claude 3.5 Sonnet: 200K tokens (~800K chars)
- * - Gemini 1.5 Pro: 1M tokens
- * 
- * We set a reasonable limit of 400K chars (~100K tokens) to balance
- * capability with cost and response time.
- */
-const MAX_DOCUMENT_LENGTH = 400000;
-
-/**
- * For documents exceeding the limit, we truncate intelligently
- * keeping the beginning and end of the document
- */
-const TRUNCATION_HEAD_RATIO = 0.7; // Keep 70% from the beginning
-const TRUNCATION_TAIL_RATIO = 0.25; // Keep 25% from the end (5% reserved for truncation message)
 
 // ============================================================================
 // DOCUMENT PROCESSING HELPERS
@@ -47,16 +24,24 @@ function truncateDocument(document: string, maxLength: number): string {
     return document;
   }
 
+  // Reserve space for the truncation message
+  const availableForContent = Math.max(0, maxLength - AI_LIMITS.TRUNCATION_MESSAGE_RESERVE);
+
   // Calculate how much to keep from head and tail
-  const headLength = Math.floor(maxLength * TRUNCATION_HEAD_RATIO);
-  const tailLength = Math.floor(maxLength * TRUNCATION_TAIL_RATIO);
-  
+  const headLength = Math.floor(availableForContent * AI_LIMITS.TRUNCATION_HEAD_RATIO);
+  const tailLength = Math.floor(availableForContent * AI_LIMITS.TRUNCATION_TAIL_RATIO);
+
+  // Guard: if head + tail would exceed document length, just slice from start
+  if (headLength + tailLength >= document.length) {
+    return document.slice(0, maxLength);
+  }
+
   const head = document.slice(0, headLength);
   const tail = document.slice(-tailLength);
-  
+
   const truncatedChars = document.length - headLength - tailLength;
   const truncationMessage = `\n\n[... ${truncatedChars.toLocaleString()} characters truncated for AI processing ...]\n\n`;
-  
+
   return head + truncationMessage + tail;
 }
 
@@ -70,7 +55,7 @@ function prepareDocument(document: string): { document: string } | ActionRespons
   }
   
   // Truncate if necessary (rather than rejecting)
-  const processedDocument = truncateDocument(document, MAX_DOCUMENT_LENGTH);
+  const processedDocument = truncateDocument(document, AI_LIMITS.MAX_DOCUMENT_LENGTH);
   
   return { document: processedDocument };
 }

@@ -30,6 +30,10 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  --color-brand: hsl(var(--brand));
+  --color-brand-foreground: hsl(var(--brand-foreground));
+  --color-brand-muted: hsl(var(--brand-muted));
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -111,6 +115,11 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
+    /* Brand colors - purple theme */
+    --brand: 271 91% 65%;
+    --brand-foreground: 0 0% 100%;
+    --brand-muted: 270 95% 95%;
   }
 
   .dark {
@@ -138,6 +147,11 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Brand colors - purple theme (dark mode) */
+    --brand: 270 75% 60%;
+    --brand-foreground: 0 0% 100%;
+    --brand-muted: 270 30% 20%;
   }
 }
 
@@ -148,4 +162,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Page transition animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
 }

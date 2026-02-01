@@ -23,7 +23,7 @@ interface SidebarOptionProps {
 
 function SidebarOptionSkeleton() {
   return (
-    <div className="h-10 bg-gray-300 animate-pulse rounded-md" />
+    <div className="h-10 bg-muted-foreground/20 animate-pulse rounded-md" />
   );
 }
 
@@ -54,10 +54,10 @@ export default function SidebarOption({ href, id }: SidebarOptionProps) {
       href={href}
       className={cn(
         "block p-2.5 rounded-md border transition-all duration-200",
-        "hover:border-gray-500 hover:shadow-sm",
+        "hover:border-border hover:shadow-sm",
         isActive
-          ? "bg-white border-gray-800 font-medium shadow-sm"
-          : "bg-gray-100 border-gray-300"
+          ? "bg-background border-foreground font-medium shadow-sm"
+          : "bg-secondary border-border"
       )}
     >
       <p className="truncate text-sm">{data.title || "Untitled"}</p>

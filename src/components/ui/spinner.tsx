@@ -23,7 +23,7 @@ export function Spinner({ size = 40, className }: SpinnerProps) {
   return (
     <div
       className={cn(
-        "animate-spin rounded-full border-4 border-purple-200 border-t-purple-600",
+        "animate-spin rounded-full border-4 border-brand-muted border-t-brand",
         className
       )}
       style={{ width: size, height: size }}
@@ -44,7 +44,7 @@ export function SpinnerWithText({
   return (
     <div className={cn("flex flex-col items-center gap-3", className)}>
       <Spinner size={size} />
-      <p className="text-sm text-gray-500">{text}</p>
+      <p className="text-sm text-muted-foreground">{text}</p>
     </div>
   );
 }

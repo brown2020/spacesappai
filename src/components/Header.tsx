@@ -1,11 +1,14 @@
 "use client";
 
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs";
 import { toast } from "sonner";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 // ============================================================================
 // HEADER LOGO
@@ -31,9 +34,30 @@ function HeaderLogo({ userName }: HeaderLogoProps) {
 
 function HeaderNav() {
   return (
-    <div className="hidden sm:block mx-2 px-3 py-2 rounded-md bg-white/90 backdrop-blur-sm shadow-sm">
+    <div className="hidden sm:block mx-2 px-3 py-2 rounded-md bg-white/90 dark:bg-white/10 backdrop-blur-sm shadow-sm">
       <Breadcrumbs />
     </div>
+  );
+}
+
+// ============================================================================
+// THEME TOGGLE
+// ============================================================================
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="text-brand-foreground hover:bg-white/10"
+      aria-label="Toggle theme"
+    >
+      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+    </Button>
   );
 }
 
@@ -69,6 +93,7 @@ function UserActions() {
 
   return (
     <div className="flex items-center gap-2">
+      <ThemeToggle />
       {!user ? (
         <button
           type="button"
@@ -107,7 +132,7 @@ export default function Header() {
   const [user] = useAuthState(firebaseAuth);
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg">
+    <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-brand to-brand/80 text-brand-foreground shadow-lg">
       <HeaderLogo userName={user?.displayName || undefined} />
       <HeaderNav />
       <UserActions />

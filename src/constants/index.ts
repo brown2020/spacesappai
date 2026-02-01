@@ -66,6 +66,33 @@ export const AI_PROMPTS = {
   QUESTION_ANSWER: `You are a helpful question and answer assistant. Your job is to generate an answer to the provided question based on the provided document. Without any introduction, provide an answer that is concise, informative, and 100 words or less.`,
 } as const;
 
+/**
+ * AI processing configuration
+ */
+export const AI_LIMITS = {
+  /** Maximum document length in characters for AI processing */
+  MAX_DOCUMENT_LENGTH: 400_000,
+  /** Ratio of document to keep from the beginning when truncating */
+  TRUNCATION_HEAD_RATIO: 0.7,
+  /** Ratio of document to keep from the end when truncating */
+  TRUNCATION_TAIL_RATIO: 0.25,
+  /** Characters reserved for truncation message */
+  TRUNCATION_MESSAGE_RESERVE: 100,
+} as const;
+
+// ============================================================================
+// FIRESTORE CONSTANTS
+// ============================================================================
+
+export const FIRESTORE = {
+  /** Maximum documents to process in a single batch operation */
+  BATCH_SIZE: 500,
+  /** Maximum retry attempts for external API calls */
+  MAX_RETRIES: 3,
+  /** Base delay in ms for exponential backoff (doubles each retry) */
+  RETRY_BASE_DELAY_MS: 100,
+} as const;
+
 // ============================================================================
 // UI CONSTANTS
 // ============================================================================

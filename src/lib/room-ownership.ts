@@ -1,6 +1,7 @@
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { requireAuthenticatedUser } from "@/lib/firebase-session";
+import { normalizeEmail } from "@/lib/utils";
 
 /**
  * Ensure a room has at least one owner.
@@ -14,7 +15,7 @@ import { requireAuthenticatedUser } from "@/lib/firebase-session";
  */
 export async function ensureRoomHasOwner(roomId: string): Promise<void> {
   const user = await requireAuthenticatedUser();
-  const email = (user.email ?? "").toLowerCase().trim();
+  const email = normalizeEmail(user.email);
   const shouldDebug =
     process.env.NODE_ENV !== "production" &&
     (process.env.ROOM_OWNERSHIP_DEBUG === "1" ||
@@ -94,7 +95,7 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
       const data = doc.data() as Record<string, unknown>;
       const parentUserDocId = doc.ref.parent.parent?.id ?? "";
       const docUserEmail =
-        typeof data.userEmail === "string" ? data.userEmail.toLowerCase().trim() : "";
+        typeof data.userEmail === "string" ? normalizeEmail(data.userEmail) : "";
       const docUserId = typeof data.userId === "string" ? data.userId : "";
 
       const isMatch =
