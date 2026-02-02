@@ -63,7 +63,9 @@ service cloud.firestore {
       return data.keys().hasAll(['title'])
         && data.title is string
         && data.title.size() > 0
-        && data.title.size() <= 500;
+        && data.title.size() <= 500
+        // icon is optional, but if present must be null or a string <= 10 chars (emoji)
+        && (!('icon' in data.keys()) || data.icon == null || (data.icon is string && data.icon.size() <= 10));
     }
 
     // Validate room data

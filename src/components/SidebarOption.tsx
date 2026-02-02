@@ -7,6 +7,7 @@ import { useDocumentData } from "react-firebase-hooks/firestore";
 import { doc } from "firebase/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
 import { cn } from "@/lib/utils";
+import PageIcon from "./PageIcon";
 
 // ============================================================================
 // TYPES
@@ -53,14 +54,15 @@ export default function SidebarOption({ href, id }: SidebarOptionProps) {
     <Link
       href={href}
       className={cn(
-        "block p-2.5 rounded-md border transition-all duration-200",
+        "flex items-center gap-2 p-2.5 rounded-md border transition-all duration-200",
         "hover:border-border hover:shadow-sm",
         isActive
           ? "bg-background border-foreground font-medium shadow-sm"
           : "bg-secondary border-border"
       )}
     >
-      <p className="truncate text-sm">{data.title || "Untitled"}</p>
+      <PageIcon icon={data.icon} size="sm" />
+      <p className="truncate text-sm flex-1">{data.title || "Untitled"}</p>
     </Link>
   );
 }

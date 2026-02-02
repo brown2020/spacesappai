@@ -19,7 +19,9 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
       </div>
       <div>
         <h3 className="font-semibold text-foreground mb-1">{title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {description}
+        </p>
       </div>
     </div>
   );
@@ -33,21 +35,21 @@ export default function HomePage() {
   return (
     <main className="flex-1 animate-fade-in">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand/80">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNjB2NjBIMHoiLz48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNGMwIDItMiA0LTIgNHMtMi0yLTItNHoiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-30" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNjB2NjBIMHoiLz48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNGMwIDItMiA0LTIgNHMtMi0yLTItNHoiIHN0cm9rZT0icmdiYSgxNDcsNTEsMjM0LDAuMSkiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48L3N2Zz4=')] opacity-50" />
         <div className="relative max-w-4xl mx-auto px-6 py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-brand-foreground mb-6 tracking-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 tracking-tight">
             Collaborate on Documents
             <br />
-            <span className="text-brand-foreground/80">in Real-Time</span>
+            <span className="text-brand">in Real-Time</span>
           </h1>
-          <p className="text-lg md:text-xl text-brand-foreground/90 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Write, edit, and brainstorm together with AI-powered features.
-            Built for teams who value simplicity and speed.
+          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+            Write, edit, and brainstorm together with AI-powered features. Built
+            for teams who value simplicity and speed.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <NewDocumentButton
-              variant="secondary"
+              variant="default"
               size="lg"
               className="text-base px-8"
             />
@@ -62,8 +64,8 @@ export default function HomePage() {
             Everything you need to collaborate
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            A powerful, minimal document editor with real-time collaboration
-            and AI capabilities built in.
+            A powerful, minimal document editor with real-time collaboration and
+            AI capabilities built in.
           </p>
         </div>
 

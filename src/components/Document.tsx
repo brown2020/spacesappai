@@ -2,7 +2,7 @@
 
 import { FormEvent, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { useDocumentTitle, useOwner } from "@/hooks";
+import { useDocumentTitle, useDocumentIcon, useOwner } from "@/hooks";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import Editor from "./Editor";
@@ -12,6 +12,8 @@ import ManageUsers from "./ManageUsers";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
 import { DocumentErrorBoundary } from "./ErrorBoundary";
+import EmojiPicker from "./EmojiPicker";
+import PageIcon from "./PageIcon";
 
 // ============================================================================
 // DOCUMENT HEADER
@@ -24,6 +26,7 @@ interface DocumentHeaderProps {
 function DocumentHeader({ documentId }: DocumentHeaderProps) {
   const { title, setTitle, updateTitle, isUpdating } =
     useDocumentTitle(documentId);
+  const { icon, updateIcon } = useDocumentIcon(documentId);
   const { isOwner, isReady } = useOwner();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -36,28 +39,66 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
     }
   };
 
+  const handleIconSelect = useCallback(
+    async (newIcon: string) => {
+      try {
+        await updateIcon(newIcon);
+      } catch (err) {
+        console.error("[DocumentHeader] Failed to update icon:", err);
+        toast.error("Failed to update icon. Please try again.");
+      }
+    },
+    [updateIcon]
+  );
+
+  const handleIconRemove = useCallback(async () => {
+    try {
+      await updateIcon(null);
+    } catch (err) {
+      console.error("[DocumentHeader] Failed to remove icon:", err);
+      toast.error("Failed to remove icon. Please try again.");
+    }
+  }, [updateIcon]);
+
   return (
     <div className="flex max-w-6xl mx-auto justify-between pb-5">
-      <form className="flex flex-1 gap-2" onSubmit={handleSubmit}>
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Document title"
-          aria-label="Document title"
-        />
+      <div className="flex flex-1 gap-2 items-center">
+        {/* Icon picker */}
+        <EmojiPicker
+          onSelect={handleIconSelect}
+          onRemove={handleIconRemove}
+          currentEmoji={icon}
+        >
+          <button
+            type="button"
+            className="flex items-center justify-center w-10 h-10 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+            aria-label="Choose page icon"
+          >
+            <PageIcon icon={icon} size="md" />
+          </button>
+        </EmojiPicker>
 
-        <Button disabled={isUpdating || !title.trim()} type="submit">
-          {isUpdating ? "Updating..." : "Update"}
-        </Button>
+        <form className="flex flex-1 gap-2" onSubmit={handleSubmit}>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Document title"
+            aria-label="Document title"
+          />
 
-        {/* Show owner controls only after ownership check completes to prevent flash */}
-        {isReady && isOwner && (
-          <>
-            <InviteUser />
-            <DeleteDocument />
-          </>
-        )}
-      </form>
+          <Button disabled={isUpdating || !title.trim()} type="submit">
+            {isUpdating ? "Updating..." : "Update"}
+          </Button>
+
+          {/* Show owner controls only after ownership check completes to prevent flash */}
+          {isReady && isOwner && (
+            <>
+              <InviteUser />
+              <DeleteDocument />
+            </>
+          )}
+        </form>
+      </div>
     </div>
   );
 }
@@ -96,7 +137,7 @@ export default function Document({ id }: DocumentProps) {
   }, []);
 
   return (
-    <article className="flex-1 h-full bg-white p-5">
+    <article className="flex-1 h-full bg-background p-5">
       <DocumentHeader documentId={id} />
       <DocumentToolbar showAvatars={isEditorReady} />
 

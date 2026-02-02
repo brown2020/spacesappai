@@ -288,6 +288,79 @@ export async function inviteUserToDocument(
  * Only the owner can remove users, and owner cannot remove themselves
  * Uses transaction to verify user exists before removal
  */
+/**
+ * Update a document's icon
+ * Any user with access (owner or editor) can update the icon
+ */
+export async function updateDocumentIcon(
+  roomId: string,
+  icon: string | null
+): Promise<ActionResponse<void>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    // Validate icon (must be null or a single emoji/short string)
+    if (icon !== null && (typeof icon !== "string" || icon.length > 10)) {
+      return errorResponse("VALIDATION_ERROR", "Invalid icon format.");
+    }
+
+    // Use transaction to verify access and update atomically
+    await adminDb.runTransaction(async (transaction) => {
+      // Check if user has access to this document
+      const userRoomRef = getUserRoomRef(user.uid, roomId);
+      const userRoomDoc = await transaction.get(userRoomRef);
+
+      if (!userRoomDoc.exists) {
+        throw new Error("FORBIDDEN");
+      }
+
+      // Get the document to ensure it exists
+      const docRef = getDocumentRef(roomId);
+      const docSnapshot = await transaction.get(docRef);
+
+      if (!docSnapshot.exists) {
+        throw new Error("NOT_FOUND");
+      }
+
+      // Update the document icon
+      transaction.update(docRef, {
+        icon,
+        updatedAt: new Date(),
+      });
+    });
+
+    return successResponse();
+  } catch (error) {
+    console.error("[updateDocumentIcon] Error:", error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (isUnauthorizedError(error)) {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
+      if (error.message === "FORBIDDEN") {
+        return errorResponse(
+          "FORBIDDEN",
+          "You don't have access to this document."
+        );
+      }
+      if (error.message === "NOT_FOUND") {
+        return errorResponse("NOT_FOUND", "Document not found.");
+      }
+    }
+
+    return errorResponse(
+      "INTERNAL_ERROR",
+      "Failed to update icon. Please try again."
+    );
+  }
+}
+
+/**
+ * Remove a user's access to a document
+ * Only the owner can remove users, and owner cannot remove themselves
+ * Uses transaction to verify user exists before removal
+ */
 export async function removeUserFromDocument(
   roomId: string,
   userIdToRemove: string

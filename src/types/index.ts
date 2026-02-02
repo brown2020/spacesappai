@@ -36,6 +36,7 @@ export interface RoomDocument extends DocumentData {
 export interface SpaceDocument {
   id: string;
   title: string;
+  icon?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
