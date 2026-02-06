@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -119,7 +119,8 @@ export default function EmojiPicker({
     setOpen(false);
   }, [onRemove]);
 
-  const recentEmojis = getRecentEmojis();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const recentEmojis = useMemo(() => getRecentEmojis(), [open]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

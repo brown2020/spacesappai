@@ -54,6 +54,10 @@ export { default as RoomProvider } from "./RoomProvider";
 // ============================================================================
 
 export { default as ClientOnly } from "./ClientOnly";
+export { default as EmojiPicker } from "./EmojiPicker";
+export { default as PageIcon } from "./PageIcon";
+export { default as FirebaseAuthBridge } from "./FirebaseAuthBridge";
+export { ThemeProvider } from "./ThemeProvider";
 export { ErrorBoundary, DocumentErrorBoundary } from "./ErrorBoundary";
 
 // ============================================================================

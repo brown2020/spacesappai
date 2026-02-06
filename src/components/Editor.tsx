@@ -10,6 +10,7 @@ import { BlockNoteEditor } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
+import { useTheme } from "next-themes";
 import { useLatest } from "@/hooks";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
@@ -68,11 +69,9 @@ function BlockNote({
     // Using props directly on first render, refs on subsequent
     const createdEditor = BlockNoteEditor.create({
       collaboration: {
-        // NOTE: BlockNote's collaboration types reference `y-protocols/awareness`.
-        // Some providers (including Liveblocks) can end up with a different
-        // `Awareness` type in their dependency tree after upgrades, causing
-        // a TS-only incompatibility even though runtime behavior is correct.
-        provider: provider as unknown as any,
+        // @ts-expect-error BlockNote expects y-protocols/awareness Awareness type,
+        // but Liveblocks bundles a compatible but structurally different Awareness type.
+        provider: provider,
         fragment: doc.getXmlFragment("document-store"),
         user: {
           name: userName || userNameRef.current || "Anonymous",
@@ -141,14 +140,9 @@ function EditorToolbar({
   darkMode,
   onToggleDarkMode,
 }: EditorToolbarProps) {
-  const buttonStyles = `
-    hover:text-white transition-colors
-    ${
-      darkMode
-        ? "text-gray-300 bg-gray-700 hover:bg-gray-100 hover:text-gray-700"
-        : "text-gray-700 bg-gray-200 hover:bg-gray-300 hover:text-gray-100"
-    }
-  `;
+  const buttonStyles = darkMode
+    ? "text-muted-foreground bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
+    : "text-muted-foreground bg-muted hover:bg-accent hover:text-accent-foreground transition-colors";
 
   return (
     <div className="flex items-center gap-2 justify-end mb-10">
@@ -178,15 +172,17 @@ export default function Editor({ onReady }: EditorProps) {
   const room = useRoom();
   const userInfo = useSelf((me) => me.info);
 
+  const { resolvedTheme, setTheme } = useTheme();
+  const darkMode = resolvedTheme === "dark";
+
   const [doc, setDoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<LiveblocksYjsProvider | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Stable callback reference
   const handleToggleDarkMode = useCallback(() => {
-    setDarkMode((prev) => !prev);
-  }, []);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [resolvedTheme, setTheme]);
 
   // Initialize Yjs document and Liveblocks provider
   useEffect(() => {

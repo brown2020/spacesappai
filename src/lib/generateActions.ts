@@ -68,7 +68,7 @@ function prepareDocument(document: string): { document: string } | ActionRespons
  * Fireworks AI provider for open-source models
  */
 const fireworks = createOpenAI({
-  apiKey: process.env.FIREWORKS_API_KEY ?? "",
+  apiKey: process.env.FIREWORKS_API_KEY || "not-configured",
   baseURL: "https://api.fireworks.ai/inference/v1",
 });
 
@@ -81,9 +81,9 @@ const fireworks = createOpenAI({
  */
 const MODEL_MAP = {
   "gpt-4o": () => openai("gpt-4o"),
-  "gemini-1.5-pro": () => google("models/gemini-1.5-pro-latest"),
+  "gemini-1.5-pro": () => google("gemini-1.5-pro-latest"),
   "mistral-large": () => mistral("mistral-large-latest"),
-  "claude-3-5-sonnet": () => anthropic("claude-3-5-sonnet-20240620"),
+  "claude-3-5-sonnet": () => anthropic("claude-3-5-sonnet-latest"),
   "llama-v3p1-405b": () =>
     fireworks("accounts/fireworks/models/llama-v3p1-405b-instruct"),
 } as const;

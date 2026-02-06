@@ -10,7 +10,7 @@ import { SpinnerWithText } from "@/components/ui/spinner";
  */
 export default function Loading() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
+    <div className="flex items-center justify-center min-h-screen bg-background">
       <SpinnerWithText size={48} text="Loading document..." />
     </div>
   );

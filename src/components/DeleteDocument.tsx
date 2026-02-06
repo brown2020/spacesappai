@@ -34,14 +34,14 @@ export default function DeleteDocument() {
     }
 
     startTransition(async () => {
-      const { success, error } = await deleteDocument(roomId);
+      const result = await deleteDocument(roomId);
 
-      if (success) {
+      if (result.success) {
         setIsOpen(false);
         router.replace("/");
         toast.success("Document deleted successfully");
       } else {
-        toast.error(error?.message || "Failed to delete document");
+        toast.error(result.error.message);
       }
     });
   };

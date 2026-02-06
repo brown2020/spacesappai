@@ -32,12 +32,12 @@ export default function Error({ error, reset }: ErrorProps) {
     error.message.toLowerCase().includes("failed to load");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gray-50">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-background">
       <div className="text-center max-w-md">
         <div className="mb-6">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-red-600"
+              className="w-8 h-8 text-destructive"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -50,10 +50,10 @@ export default function Error({ error, reset }: ErrorProps) {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-foreground mb-2">
             Unable to load document
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {isNetworkError
               ? "Please check your internet connection and try again."
               : "There was a problem loading this document. Please try again or contact support if the issue persists."}

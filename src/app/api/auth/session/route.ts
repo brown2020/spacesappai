@@ -24,23 +24,41 @@ export async function POST(req: Request) {
     );
   }
 
-  // Verify the client token, then mint an HttpOnly session cookie for SSR / server actions.
-  const decoded = await adminAuth.verifyIdToken(idToken);
-  const sessionCookie = await adminAuth.createSessionCookie(idToken, {
-    expiresIn: FIVE_DAYS_MS,
-  });
+  try {
+    // Verify the client token, then mint an HttpOnly session cookie for SSR / server actions.
+    const decoded = await adminAuth.verifyIdToken(idToken);
 
-  const res = NextResponse.json(
-    { ok: true, uid: decoded.uid },
-    { headers: { "Cache-Control": "no-store" } }
-  );
+    // Reject tokens older than 5 minutes to limit stolen-token window
+    const fiveMinutesAgo = Date.now() / 1000 - 5 * 60;
+    if (decoded.auth_time < fiveMinutesAgo) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Token too old. Please sign in again." },
+        { status: 401, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
-  res.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
-    ...SESSION_COOKIE_OPTIONS,
-    maxAge: Math.floor(FIVE_DAYS_MS / 1000),
-  });
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, {
+      expiresIn: FIVE_DAYS_MS,
+    });
 
-  return res;
+    const res = NextResponse.json(
+      { ok: true, uid: decoded.uid },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+
+    res.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
+      ...SESSION_COOKIE_OPTIONS,
+      maxAge: Math.floor(FIVE_DAYS_MS / 1000),
+    });
+
+    return res;
+  } catch (error) {
+    console.error("[session] Failed to create session:", error);
+    return NextResponse.json(
+      { error: "Unauthorized", message: "Invalid or expired token" },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
 }
 
 export async function DELETE() {

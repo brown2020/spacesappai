@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { doc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
@@ -11,6 +11,7 @@ interface UseDocumentIconReturn {
   updateIcon: (icon: string | null) => Promise<void>;
   isUpdating: boolean;
   isLoading: boolean;
+  error: Error | undefined;
 }
 
 /**
@@ -22,9 +23,19 @@ export function useDocumentIcon(documentId: string): UseDocumentIconReturn {
     () => doc(db, COLLECTIONS.DOCUMENTS, documentId),
     [documentId]
   );
-  const [data, isLoading] = useDocumentData(docRef);
+  const [data, isLoading, error] = useDocumentData(docRef);
   const [optimisticIcon, setOptimisticIcon] = useState<string | null | undefined>(undefined);
   const [isPending, startTransition] = useTransition();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Use optimistic value if set, otherwise use Firestore data
   const icon = optimisticIcon !== undefined ? optimisticIcon : (data?.icon ?? null);
@@ -44,7 +55,11 @@ export function useDocumentIcon(documentId: string): UseDocumentIconReturn {
         } else {
           // Clear optimistic state so Firestore data takes over
           // (small delay to let Firestore listener catch up)
-          setTimeout(() => setOptimisticIcon(undefined), 300);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => {
+            setOptimisticIcon(undefined);
+            timeoutRef.current = null;
+          }, 300);
         }
       });
     },
@@ -56,5 +71,6 @@ export function useDocumentIcon(documentId: string): UseDocumentIconReturn {
     updateIcon,
     isUpdating: isPending,
     isLoading,
+    error,
   };
 }

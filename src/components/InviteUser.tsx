@@ -44,17 +44,17 @@ export default function InviteUser() {
     }
 
     startTransition(async () => {
-      const { success, error: actionError } = await inviteUserToDocument(
+      const result = await inviteUserToDocument(
         roomId,
         normalizeEmail(email)
       );
 
-      if (success) {
+      if (result.success) {
         setIsOpen(false);
         setEmail("");
         toast.success(`Invited ${email} successfully`);
       } else {
-        toast.error(actionError?.message || "Failed to invite user");
+        toast.error(result.error.message);
       }
     });
   };

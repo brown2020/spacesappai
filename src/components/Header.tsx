@@ -45,13 +45,13 @@ function HeaderNav() {
 // ============================================================================
 
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       className="text-brand-foreground hover:bg-white/10"
       aria-label="Toggle theme"
     >
@@ -65,8 +65,12 @@ function ThemeToggle() {
 // USER ACTIONS
 // ============================================================================
 
-function UserActions() {
-  const [user, isLoading] = useAuthState(firebaseAuth);
+interface UserActionsProps {
+  user: ReturnType<typeof useAuthState>[0];
+  isLoading: boolean;
+}
+
+function UserActions({ user, isLoading }: UserActionsProps) {
 
   const handleSignIn = async () => {
     try {
@@ -75,7 +79,10 @@ function UserActions() {
 
       const redirectTo =
         new URLSearchParams(window.location.search).get("redirect") ?? "";
-      if (redirectTo) window.location.assign(redirectTo);
+      // Only allow relative redirects to prevent open redirect attacks
+      if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+        window.location.assign(redirectTo);
+      }
     } catch (err) {
       console.error("[Header] signIn error:", err);
       toast.error("Sign in failed. Please try again.");
@@ -129,13 +136,13 @@ function UserActions() {
 // ============================================================================
 
 export default function Header() {
-  const [user] = useAuthState(firebaseAuth);
+  const [user, isLoading] = useAuthState(firebaseAuth);
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-brand to-brand/80 text-brand-foreground shadow-lg">
       <HeaderLogo userName={user?.displayName || undefined} />
       <HeaderNav />
-      <UserActions />
+      <UserActions user={user} isLoading={isLoading} />
     </header>
   );
 }

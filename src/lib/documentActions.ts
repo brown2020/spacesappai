@@ -3,6 +3,7 @@
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { FIRESTORE } from "@/constants";
+import { FieldValue } from "firebase-admin/firestore";
 import { liveblocks } from "@/lib/liveblocks";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import { errorResponse, successResponse } from "@/lib/action-utils";
@@ -31,8 +32,8 @@ export async function createNewDocument(): Promise<
 
       transaction.set(docRef, {
         title: "New Doc",
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       // Create room entry for the owner
@@ -46,7 +47,7 @@ export async function createNewDocument(): Promise<
         userId: user.uid,
         userEmail: user.email ?? undefined,
         role: "owner",
-        createdAt: new Date(),
+        createdAt: FieldValue.serverTimestamp(),
         roomId: docRef.id,
       });
 
@@ -75,23 +76,21 @@ export async function createNewDocument(): Promise<
  * in transaction isolation by using a loop to ensure all entries are deleted
  */
 async function deleteAllRoomEntries(roomId: string): Promise<void> {
-  let hasMoreRooms = true;
-
-  while (hasMoreRooms) {
+  const MAX_ITERATIONS = 20;
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
     const roomsQuery = await adminDb
       .collectionGroup(COLLECTIONS.ROOMS)
       .where("roomId", "==", roomId)
       .limit(FIRESTORE.BATCH_SIZE)
       .get();
 
-    if (roomsQuery.empty) {
-      hasMoreRooms = false;
-    } else {
-      const batch = adminDb.batch();
-      roomsQuery.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-    }
+    if (roomsQuery.empty) return;
+
+    const batch = adminDb.batch();
+    roomsQuery.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
   }
+  console.warn(`[deleteAllRoomEntries] Hit max iterations (${MAX_ITERATIONS}) for room: ${roomId}`);
 }
 
 /**
@@ -248,7 +247,7 @@ export async function inviteUserToDocument(
         userId: invitee.uid,
         userEmail: normalizedEmail,
         role: "editor",
-        createdAt: new Date(),
+        createdAt: FieldValue.serverTimestamp(),
         roomId,
       });
     });
@@ -283,11 +282,6 @@ export async function inviteUserToDocument(
   }
 }
 
-/**
- * Remove a user's access to a document
- * Only the owner can remove users, and owner cannot remove themselves
- * Uses transaction to verify user exists before removal
- */
 /**
  * Update a document's icon
  * Any user with access (owner or editor) can update the icon
@@ -325,7 +319,7 @@ export async function updateDocumentIcon(
       // Update the document icon
       transaction.update(docRef, {
         icon,
-        updatedAt: new Date(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
     });
 

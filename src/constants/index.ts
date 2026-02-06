@@ -73,7 +73,7 @@ export const AI_LIMITS = {
   /** Maximum document length in characters for AI processing */
   MAX_DOCUMENT_LENGTH: 400_000,
   /** Ratio of document to keep from the beginning when truncating */
-  TRUNCATION_HEAD_RATIO: 0.7,
+  TRUNCATION_HEAD_RATIO: 0.75,
   /** Ratio of document to keep from the end when truncating */
   TRUNCATION_TAIL_RATIO: 0.25,
   /** Characters reserved for truncation message */

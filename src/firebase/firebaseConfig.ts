@@ -5,7 +5,6 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getAuth, type Auth } from "firebase/auth";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { clientEnv } from "@/lib/env";
 
 // ============================================================================
@@ -82,11 +81,6 @@ export const db: Firestore = getClientFirestore(app);
  * Firebase Authentication instance
  */
 export const auth: Auth = getAuth(app);
-
-/**
- * Firebase Storage instance
- */
-export const storage: FirebaseStorage = getStorage(app);
 
 /**
  * Firebase app instance

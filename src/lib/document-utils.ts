@@ -8,7 +8,7 @@ import * as Y from "yjs";
  * @returns The document content as a string, or null if empty
  */
 export function getDocumentContent(doc: Y.Doc): string | null {
-  const data = doc.get("document-store").toJSON();
+  const data: unknown = doc.get("document-store").toJSON();
 
   if (!data) {
     return null;

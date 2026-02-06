@@ -38,7 +38,7 @@ export default function SidebarOption({ href, id }: SidebarOptionProps) {
     () => doc(db, COLLECTIONS.DOCUMENTS, id),
     [id]
   );
-  const [data, loading] = useDocumentData(docRef);
+  const [data, loading, error] = useDocumentData(docRef);
 
   const isActive = pathname === href;
 
@@ -46,7 +46,7 @@ export default function SidebarOption({ href, id }: SidebarOptionProps) {
     return <SidebarOptionSkeleton />;
   }
 
-  if (!data) {
+  if (error || !data) {
     return null;
   }
 

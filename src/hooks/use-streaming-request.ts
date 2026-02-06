@@ -21,7 +21,7 @@ interface UseStreamingRequestOptions {
  * The action can return either a StreamableValue or an ActionResponse (for errors)
  * We use `unknown` here because the exact StreamableValue type varies based on usage
  */
-type StreamingActionResult = unknown | ActionResponse;
+type StreamingActionResult = ActionResponse | unknown;
 
 interface UseStreamingRequestReturn {
   /** Whether a request is in progress */
@@ -114,9 +114,9 @@ export function useStreamingRequest(
 
         // Check if result is an error response (ActionResponse has 'success' property)
         if (response && typeof response === "object" && "success" in response) {
-          const errorResponse = response as ActionResponse;
-          if (!errorResponse.success) {
-            toast.error(errorResponse.error?.message || errorMessage);
+          const actionResponse = response as ActionResponse;
+          if (!actionResponse.success) {
+            toast.error(actionResponse.error.message || errorMessage);
             return;
           }
         }

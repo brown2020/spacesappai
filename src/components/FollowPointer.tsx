@@ -11,7 +11,6 @@ interface FollowPointerProps {
   info: {
     name?: string;
     email: string;
-    avatar?: string;
   };
   x: number;
   y: number;

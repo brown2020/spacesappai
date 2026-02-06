@@ -1,5 +1,3 @@
-import { DocumentData } from "firebase/firestore";
-
 /**
  * Liveblocks user info for real-time presence
  */
@@ -19,9 +17,11 @@ export interface LiveblocksUserInfo {
 export type RoomRole = "owner" | "editor";
 
 /**
- * Room document stored in Firestore
+ * Room document stored in Firestore.
+ * Index signature allows spreading Firestore DocumentData without importing the client SDK.
  */
-export interface RoomDocument extends DocumentData {
+export interface RoomDocument {
+  [key: string]: unknown;
   id?: string;
   createdAt: Date | string;
   role: RoomRole;
@@ -93,14 +93,9 @@ export type SupportedLanguage =
 /**
  * Base response type for server actions
  */
-export interface ActionResponse<T = undefined> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: ActionErrorCode;
-    message: string;
-  };
-}
+export type ActionResponse<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: { code: ActionErrorCode; message: string } };
 
 /**
  * Error codes for server actions

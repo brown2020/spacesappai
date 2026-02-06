@@ -23,11 +23,12 @@ export default async function DocumentLayout({
   const { id } = await params;
 
   // Protect this route - requires authentication (server session cookie)
-  await requireAuthenticatedUserOrRedirect(`/?redirect=${encodeURIComponent(`/doc/${id}`)}`);
+  const user = await requireAuthenticatedUserOrRedirect(`/?redirect=${encodeURIComponent(`/doc/${id}`)}`);
 
   // Self-heal: if a room somehow lost its last owner, restore ownership for the
   // current user (only if they already have a room entry).
-  await ensureRoomHasOwner(id);
+  // Pass verified user to avoid a redundant session cookie verification.
+  await ensureRoomHasOwner(id, user);
 
   return <RoomProvider roomId={id}>{children}</RoomProvider>;
 }

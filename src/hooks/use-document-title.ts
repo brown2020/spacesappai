@@ -83,12 +83,16 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     setTitle(newTitle);
   }, []);
 
+  // Use a ref to avoid recreating the callback when isUpdating toggles
+  const isUpdatingRef = useRef(false);
+
   const updateTitle = useCallback(async () => {
     // Use ref to get current title value (avoids stale closure)
     const trimmedTitle = titleRef.current.trim();
-    if (!trimmedTitle || isUpdating) return;
+    if (!trimmedTitle || isUpdatingRef.current) return;
 
     setIsUpdating(true);
+    isUpdatingRef.current = true;
     updateInFlightRef.current = true;
 
     try {
@@ -106,6 +110,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
       if (isMountedRef.current) {
         setIsUpdating(false);
       }
+      isUpdatingRef.current = false;
       // Clear any existing timeout before setting a new one
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -117,7 +122,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [docRef, isUpdating]);
+  }, [docRef]);
 
   return {
     title,

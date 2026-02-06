@@ -21,14 +21,11 @@ import type { ActionResponse, ActionErrorCode } from "@/types";
  * return errorResponse("VALIDATION_ERROR", "Email is required");
  * ```
  */
-export function errorResponse<T = undefined>(
+export function errorResponse<T = void>(
   code: ActionErrorCode,
   message: string
 ): ActionResponse<T> {
-  return {
-    success: false,
-    error: { code, message },
-  };
+  return { success: false, error: { code, message } };
 }
 
 /**
@@ -44,9 +41,6 @@ export function errorResponse<T = undefined>(
  * return successResponse();
  * ```
  */
-export function successResponse<T>(data?: T): ActionResponse<T> {
-  return {
-    success: true,
-    data,
-  };
+export function successResponse<T = void>(data?: T): ActionResponse<T> {
+  return { success: true, data } as ActionResponse<T>;
 }

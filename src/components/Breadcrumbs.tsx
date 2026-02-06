@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Breadcrumb,
@@ -62,29 +63,23 @@ export default function Breadcrumbs() {
       <BreadcrumbList>
         {/* Home link */}
         <BreadcrumbItem>
-          <BreadcrumbLink
-            href="/"
-            className="text-gray-600 hover:text-gray-900"
-          >
-            Home
+          <BreadcrumbLink asChild>
+            <Link href="/">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
 
         {/* Dynamic segments */}
         {breadcrumbs.map((segment) => (
           <Fragment key={segment.href}>
-            <BreadcrumbSeparator className="text-gray-400" />
+            <BreadcrumbSeparator />
             <BreadcrumbItem>
               {segment.isLast ? (
-                <BreadcrumbPage className="text-gray-900 font-medium">
+                <BreadcrumbPage className="font-medium">
                   {segment.label}
                 </BreadcrumbPage>
               ) : (
-                <BreadcrumbLink
-                  href={segment.href}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  {segment.label}
+                <BreadcrumbLink asChild>
+                  <Link href={segment.href}>{segment.label}</Link>
                 </BreadcrumbLink>
               )}
             </BreadcrumbItem>

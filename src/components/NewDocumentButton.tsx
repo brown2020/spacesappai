@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { createNewDocument } from "@/lib/documentActions";
 import { Button, type ButtonProps } from "./ui/button";
 
-interface NewDocumentButtonProps extends Omit<ButtonProps, "onClick" | "disabled"> {}
+type NewDocumentButtonProps = Omit<ButtonProps, "onClick" | "disabled">;
 
 export default function NewDocumentButton(props: NewDocumentButtonProps) {
   const [isPending, startTransition] = useTransition();
@@ -14,12 +14,12 @@ export default function NewDocumentButton(props: NewDocumentButtonProps) {
 
   const handleCreateNewDocument = () => {
     startTransition(async () => {
-      const { success, data, error } = await createNewDocument();
+      const result = await createNewDocument();
 
-      if (success && data?.docId) {
-        router.push(`/doc/${data.docId}`);
+      if (result.success) {
+        router.push(`/doc/${result.data.docId}`);
       } else {
-        toast.error(error?.message || "Failed to create document");
+        toast.error(result.error.message);
       }
     });
   };

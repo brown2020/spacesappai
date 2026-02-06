@@ -46,7 +46,7 @@ function UserListItem({
       <p className="text-sm truncate flex-1">{displayName}</p>
 
       <div className="flex items-center gap-2 shrink-0">
-        <span className="px-2 py-1 text-xs bg-gray-100 rounded-md capitalize">
+        <span className="px-2 py-1 text-xs bg-muted rounded-md capitalize">
           {role}
         </span>
 
@@ -84,13 +84,13 @@ export default function ManageUsers() {
     setRemovingUserId(userId);
     startTransition(async () => {
       try {
-        const { success, error } = await removeUserFromDocument(room.id, userId);
+        const result = await removeUserFromDocument(room.id, userId);
 
         if (isMountedRef.current) {
-          if (success) {
+          if (result.success) {
             toast.success("User removed successfully");
           } else {
-            toast.error(error?.message || "Failed to remove user");
+            toast.error(result.error.message);
           }
         }
       } finally {
@@ -119,7 +119,7 @@ export default function ManageUsers() {
 
         <div className="max-h-64 overflow-y-auto">
           {users.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-4">
+            <p className="text-muted-foreground text-sm text-center py-4">
               No users found
             </p>
           ) : (

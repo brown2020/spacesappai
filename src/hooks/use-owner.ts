@@ -57,7 +57,6 @@ export function useOwner(): UseOwnerReturn {
     typeof window !== "undefined" &&
     window.location.search.includes("debugOwner=1")
   ) {
-    // eslint-disable-next-line no-console
     console.log("[useOwner]", {
       roomId: room.id,
       uid: user?.uid ?? null,

@@ -2,9 +2,7 @@ import admin from "firebase-admin";
 import { getApps, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
-import { getStorage } from "firebase-admin/storage";
-import type { Bucket } from "@google-cloud/storage";
-import { serverEnv } from "@/lib/env";
+import { clientEnv, serverEnv } from "@/lib/env";
 
 // ============================================================================
 // FIREBASE ADMIN CONFIGURATION
@@ -40,7 +38,7 @@ function initializeFirebaseAdmin(): App {
 
   return admin.initializeApp({
     credential: admin.credential.cert(adminCredentials),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGEBUCKET,
+    storageBucket: clientEnv.firebase.storageBucket,
   });
 }
 
@@ -61,12 +59,3 @@ export const adminDb: Firestore = getFirestore();
  */
 export const adminAuth: Auth = getAuth();
 
-/**
- * Firebase Admin Storage bucket instance
- */
-export const adminBucket: Bucket = getStorage().bucket();
-
-/**
- * Firebase Admin SDK reference
- */
-export { admin };

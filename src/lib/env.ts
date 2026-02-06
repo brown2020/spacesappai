@@ -85,10 +85,16 @@ export function validateClientEnv(): void {
     ["NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY", clientEnv.liveblocks.publicKey],
   ] as const;
 
+  const missing: string[] = [];
   for (const [name, value] of required) {
     if (!value) {
-      console.error(`Missing required client environment variable: ${name}`);
+      missing.push(name);
     }
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required client environment variables: ${missing.join(", ")}`
+    );
   }
 }
 
@@ -115,11 +121,9 @@ export function validateServerEnv(): void {
 // ENVIRONMENT CHECKS
 // ============================================================================
 
-export const isDev = serverEnv.nodeEnv === "development";
-export const isProd = serverEnv.nodeEnv === "production";
-export const isTest = serverEnv.nodeEnv === "test";
-
-
+export const isDev = process.env.NODE_ENV === "development";
+export const isProd = process.env.NODE_ENV === "production";
+export const isTest = process.env.NODE_ENV === "test";
 
 
 

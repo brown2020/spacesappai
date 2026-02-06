@@ -13,13 +13,15 @@ import { normalizeEmail } from "@/lib/utils";
  * Behavior: if an owner exists, this is a no-op. If no owner exists and the
  * current user has a room entry, we promote that entry to `role: "owner"`.
  */
-export async function ensureRoomHasOwner(roomId: string): Promise<void> {
-  const user = await requireAuthenticatedUser();
-  const email = normalizeEmail(user.email);
+export async function ensureRoomHasOwner(
+  roomId: string,
+  user?: { uid: string; email?: string | null }
+): Promise<void> {
+  const authenticatedUser = user ?? (await requireAuthenticatedUser());
+  const email = normalizeEmail(authenticatedUser.email);
   const shouldDebug =
     process.env.NODE_ENV !== "production" &&
-    (process.env.ROOM_OWNERSHIP_DEBUG === "1" ||
-      roomId === "SbYy0vIHt7zblvfxv8Et");
+    process.env.ROOM_OWNERSHIP_DEBUG === "1";
 
   const docExists = await adminDb
     .collection(COLLECTIONS.DOCUMENTS)
@@ -31,8 +33,8 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
   if (shouldDebug) {
     console.info("[ensureRoomHasOwner] start", {
       roomId,
-      uid: user.uid,
-      email: user.email ?? null,
+      uid: authenticatedUser.uid,
+      email: authenticatedUser.email ?? null,
       docExists,
     });
   }
@@ -120,65 +122,63 @@ export async function ensureRoomHasOwner(roomId: string): Promise<void> {
     if (!isLegacyOwnerForCurrentUser) return;
   }
 
+  // Use a transaction to prevent two concurrent users from both being promoted to owner
   const currentUserRoomRef = adminDb
     .collection(COLLECTIONS.USERS)
-    .doc(user.uid)
+    .doc(authenticatedUser.uid)
     .collection(COLLECTIONS.ROOMS)
     .doc(roomId);
 
-  const currentUserRoomSnap = await currentUserRoomRef.get();
-  if (!currentUserRoomSnap.exists) {
-    // If the uid-keyed entry doesn't exist but we matched a legacy owner doc to this user,
-    // create the uid-keyed owner entry to restore expected behavior.
-    if (!matchedLegacyData) {
+  await adminDb.runTransaction(async (transaction) => {
+    const currentUserRoomSnap = await transaction.get(currentUserRoomRef);
+
+    if (!currentUserRoomSnap.exists) {
+      if (!matchedLegacyData) {
+        if (shouldDebug) {
+          console.info("[ensureRoomHasOwner] uid-room-missing-no-legacy-match", {
+            roomId,
+            uid: authenticatedUser.uid,
+          });
+        }
+        return;
+      }
+
+      // Only pick known fields from legacy data to avoid writing arbitrary data
+      const legacyData = matchedLegacyData as Record<string, unknown>;
+      const safeFields: Record<string, unknown> = {};
+      for (const key of ["createdAt", "roomId", "userId", "userEmail", "role"]) {
+        if (key in legacyData) safeFields[key] = legacyData[key];
+      }
+
+      transaction.set(currentUserRoomRef, {
+        ...safeFields,
+        role: "owner",
+        userId: authenticatedUser.uid,
+        userEmail: authenticatedUser.email ?? undefined,
+        roomId,
+      }, { merge: true });
+
       if (shouldDebug) {
-        console.info("[ensureRoomHasOwner] uid-room-missing-no-legacy-match", {
+        console.info("[ensureRoomHasOwner] created-uid-owner-entry", {
           roomId,
-          uid: user.uid,
+          uid: authenticatedUser.uid,
         });
       }
       return;
     }
 
-    // TS note: matchedLegacyData is assigned inside a callback. Some TS control-flow
-    // paths don't narrow it reliably under Next's build typecheck, so we assert here.
-    const legacyData = matchedLegacyData as Record<string, unknown>;
-
-    await currentUserRoomRef.set(
-      {
-        ...legacyData,
-        role: "owner",
-        userId: user.uid,
-        userEmail: user.email ?? undefined,
-        roomId,
-      },
-      { merge: true }
-    );
+    transaction.set(currentUserRoomRef, {
+      role: "owner",
+      userId: authenticatedUser.uid,
+      userEmail: authenticatedUser.email ?? undefined,
+      roomId,
+    }, { merge: true });
 
     if (shouldDebug) {
-      console.info("[ensureRoomHasOwner] created-uid-owner-entry", {
+      console.info("[ensureRoomHasOwner] promoted-existing-uid-entry-to-owner", {
         roomId,
-        uid: user.uid,
+        uid: authenticatedUser.uid,
       });
     }
-
-    return;
-  }
-
-  await currentUserRoomRef.set(
-    {
-      role: "owner",
-      userId: user.uid,
-      userEmail: user.email ?? undefined,
-      roomId,
-    },
-    { merge: true }
-  );
-
-  if (shouldDebug) {
-    console.info("[ensureRoomHasOwner] promoted-existing-uid-entry-to-owner", {
-      roomId,
-      uid: user.uid,
-    });
-  }
+  });
 }

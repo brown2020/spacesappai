@@ -35,12 +35,12 @@ interface DefaultFallbackProps {
 
 function DefaultFallback({ error, onRetry }: DefaultFallbackProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-red-50 rounded-lg border border-red-200">
+    <div className="flex flex-col items-center justify-center min-h-[200px] p-6 bg-destructive/10 rounded-lg border border-destructive/20">
       <div className="text-center max-w-md">
-        <h2 className="text-lg font-semibold text-red-800 mb-2">
+        <h2 className="text-lg font-semibold text-foreground mb-2">
           Something went wrong
         </h2>
-        <p className="text-sm text-red-600 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           {error?.message || "An unexpected error occurred"}
         </p>
         <Button onClick={onRetry} variant="outline" size="sm">
@@ -98,7 +98,12 @@ export class ErrorBoundary extends Component<
     this.props.onError?.(error, errorInfo);
   }
 
+  private static readonly MAX_RETRIES = 3;
+
   handleRetry = (): void => {
+    if (this.state.retryCount >= ErrorBoundary.MAX_RETRIES) {
+      return;
+    }
     this.setState((prev) => ({
       hasError: false,
       error: null,
@@ -121,11 +126,11 @@ export class ErrorBoundary extends Component<
         return this.props.fallback;
       }
 
-      // Render default fallback with retry
+      // Render default fallback with retry (disable retry after max attempts)
       return (
         <DefaultFallback
           error={this.state.error}
-          onRetry={this.handleRetry}
+          onRetry={this.state.retryCount < ErrorBoundary.MAX_RETRIES ? this.handleRetry : () => {}}
         />
       );
     }
@@ -154,12 +159,12 @@ function DocumentFallback({ error, onRetry }: DocumentFallbackProps) {
     error?.message.toLowerCase().includes("fetch");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 rounded-lg">
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-muted rounded-lg">
       <div className="text-center max-w-md">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">
+        <h2 className="text-xl font-semibold text-foreground mb-2">
           Unable to load document
         </h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-muted-foreground mb-4">
           {isNetworkError
             ? "Please check your internet connection and try again."
             : "There was a problem loading this document. Please try again or contact support if the issue persists."}

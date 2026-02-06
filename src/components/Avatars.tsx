@@ -113,7 +113,7 @@ export default function Avatars() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-500 hidden sm:inline">
+      <span className="text-sm text-muted-foreground hidden sm:inline">
         {uniqueUsers.length === 1
           ? "Just you"
           : `${uniqueUsers.length} editing`}

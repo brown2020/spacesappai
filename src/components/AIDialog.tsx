@@ -8,7 +8,6 @@ import { useStreamingRequest } from "@/hooks";
 import { getDocumentContent } from "@/lib/document-utils";
 import { DEFAULT_AI_MODEL } from "@/constants";
 import type { AIModelName } from "@/types";
-import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import AIModelSelect from "./AIModelSelect";
 
 // Dynamically import Markdown for better code splitting
 const Markdown = dynamic(() => import("react-markdown"), { ssr: false });
@@ -137,7 +135,7 @@ export default function AIDialog({
         </form>
 
         {result && (
-          <div className="p-4 bg-gray-50 rounded-lg overflow-y-auto max-h-64 prose prose-sm max-w-none">
+          <div className="p-4 bg-muted rounded-lg overflow-y-auto max-h-64 prose prose-sm max-w-none dark:prose-invert">
             <Markdown>{result}</Markdown>
           </div>
         )}

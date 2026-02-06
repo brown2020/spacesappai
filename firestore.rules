@@ -52,9 +52,11 @@ service cloud.firestore {
       return hasRoomAccess(documentId) && getUserRole(documentId) == 'editor';
     }
 
-    // Check if user can read/write a document (owner or editor)
+    // Check if user can read/write a document (owner or editor).
+    // Uses a single hasRoomAccess + getUserRole check to minimize read operations.
     function canAccessDocument(documentId) {
-      return isOwner(documentId) || isEditor(documentId);
+      return hasRoomAccess(documentId)
+        && (getUserRole(documentId) == 'owner' || getUserRole(documentId) == 'editor');
     }
 
     // Validate document data on create/update
@@ -85,9 +87,10 @@ service cloud.firestore {
       // Allow read if user has room access (owner or editor)
       allow read: if isAuthenticated() && canAccessDocument(documentId);
 
-      // Allow create if authenticated (room access is created atomically by server)
-      // Note: Document creation is handled by server actions with admin SDK
-      allow create: if isAuthenticated();
+      // Allow create if authenticated with valid data
+      // Note: Document creation is primarily handled by server actions with admin SDK,
+      // but we validate client-side creates as a defense-in-depth measure.
+      allow create: if isAuthenticated() && isValidDocumentData();
 
       // Allow update if user has access (owner or editor can edit)
       allow update: if isAuthenticated()
