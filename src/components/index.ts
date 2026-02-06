@@ -18,6 +18,7 @@ export { default as Breadcrumbs } from "./Breadcrumbs";
 // ============================================================================
 
 export { default as Document } from "./Document";
+export { default as DocumentCover } from "./DocumentCover";
 export { default as Editor } from "./Editor";
 export { default as DeleteDocument } from "./DeleteDocument";
 export { default as InviteUser } from "./InviteUser";

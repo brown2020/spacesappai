@@ -120,6 +120,7 @@ export default async function PublicDocumentPage({ params }: PublicPageProps) {
 
   const title = (docData.title as string) || "Untitled";
   const icon = (docData.icon as string | null) ?? null;
+  const coverImage = (docData.coverImage as string | null) ?? null;
 
   // Fetch the Yjs binary from Liveblocks
   let contentHtml = "";
@@ -138,6 +139,18 @@ export default async function PublicDocumentPage({ params }: PublicPageProps) {
     <div className="min-h-screen bg-background">
       {/* Document content */}
       <article className="max-w-3xl mx-auto px-6 py-12">
+        {/* Cover image */}
+        {coverImage && (
+          <div className="h-48 rounded-lg overflow-hidden bg-muted mb-8 -mx-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverImage}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-center gap-3 mb-4">

@@ -11,6 +11,7 @@ import ShareMenu from "./ShareMenu";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
 import { DocumentErrorBoundary } from "./ErrorBoundary";
+import DocumentCover from "./DocumentCover";
 import EmojiPicker from "./EmojiPicker";
 import PageIcon from "./PageIcon";
 
@@ -148,6 +149,7 @@ export default function Document({ id }: DocumentProps) {
 
   return (
     <article className="flex-1 h-full bg-background p-5">
+      <DocumentCover documentId={id} />
       <DocumentHeader documentId={id} />
       <DocumentToolbar showAvatars={isEditorReady} />
 

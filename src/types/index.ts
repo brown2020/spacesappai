@@ -37,6 +37,7 @@ export interface SpaceDocument {
   id: string;
   title: string;
   icon?: string | null;
+  coverImage?: string | null;
   isPublished?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

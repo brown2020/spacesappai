@@ -445,6 +445,73 @@ export async function togglePublishDocument(
 }
 
 /**
+ * Update a document's cover image
+ * Any user with edit access (owner or editor) can update the cover
+ */
+export async function updateDocumentCover(
+  roomId: string,
+  coverImage: string | null
+): Promise<ActionResponse<void>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    // Validate cover image URL
+    if (coverImage !== null) {
+      if (typeof coverImage !== "string" || coverImage.length > 2000) {
+        return errorResponse("VALIDATION_ERROR", "Invalid cover image URL.");
+      }
+      try {
+        new URL(coverImage);
+      } catch {
+        return errorResponse("VALIDATION_ERROR", "Please provide a valid URL.");
+      }
+    }
+
+    await adminDb.runTransaction(async (transaction) => {
+      const userRoomRef = getUserRoomRef(user.uid, roomId);
+      const userRoomDoc = await transaction.get(userRoomRef);
+
+      if (!userRoomDoc.exists) {
+        throw new Error("FORBIDDEN");
+      }
+
+      const role = userRoomDoc.data()?.role as string | undefined;
+      if (role === "viewer") {
+        throw new Error("FORBIDDEN");
+      }
+
+      const docRef = getDocumentRef(roomId);
+      const docSnapshot = await transaction.get(docRef);
+
+      if (!docSnapshot.exists) {
+        throw new Error("NOT_FOUND");
+      }
+
+      transaction.update(docRef, {
+        coverImage,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return successResponse();
+  } catch (error) {
+    console.error("[updateDocumentCover] Error:", error);
+    if (error instanceof Error) {
+      if (isUnauthorizedError(error)) {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
+      if (error.message === "FORBIDDEN") {
+        return errorResponse("FORBIDDEN", "You don't have permission to edit this document.");
+      }
+      if (error.message === "NOT_FOUND") {
+        return errorResponse("NOT_FOUND", "Document not found.");
+      }
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to update cover. Please try again.");
+  }
+}
+
+/**
  * Update a document's icon
  * Any user with access (owner or editor) can update the icon
  */

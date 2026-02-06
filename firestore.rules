@@ -74,7 +74,9 @@ service cloud.firestore {
         // icon is optional, but if present must be null or a string <= 10 chars (emoji)
         && (!('icon' in data.keys()) || data.icon == null || (data.icon is string && data.icon.size() <= 10))
         // isPublished is optional, but if present must be a boolean
-        && (!('isPublished' in data.keys()) || data.isPublished is bool);
+        && (!('isPublished' in data.keys()) || data.isPublished is bool)
+        // coverImage is optional, but if present must be null or a string <= 2000 chars
+        && (!('coverImage' in data.keys()) || data.coverImage == null || (data.coverImage is string && data.coverImage.size() <= 2000));
     }
 
     // Validate room data
