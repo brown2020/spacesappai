@@ -8,6 +8,7 @@ export { useDocumentIcon } from "./use-document-icon";
 export { useRoomUsers } from "./use-room-users";
 export { useOwner } from "./use-owner";
 export { useUserDocuments } from "./use-user-documents";
+export { useComments } from "./use-comments";
 
 // Navigation hooks
 export { useRoomId } from "./use-room-id";

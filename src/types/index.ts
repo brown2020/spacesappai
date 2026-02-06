@@ -52,6 +52,18 @@ export interface GroupedRoomDocuments {
   viewer: RoomDocument[];
 }
 
+/**
+ * Comment on a document
+ */
+export interface Comment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  createdAt: Date | string;
+}
+
 // ============================================================================
 // AI MODEL TYPES
 // ============================================================================

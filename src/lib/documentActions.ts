@@ -9,7 +9,7 @@ import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-se
 import { errorResponse, successResponse } from "@/lib/action-utils";
 import { getUserRoomRef, getDocumentRef, verifyOwnership } from "@/lib/firestore-helpers";
 import { normalizeEmail } from "@/lib/utils";
-import type { ActionResponse, CreateDocumentResponse, RoomRole } from "@/types";
+import type { ActionResponse, Comment, CreateDocumentResponse, RoomRole } from "@/types";
 
 // ============================================================================
 // DOCUMENT ACTIONS
@@ -643,5 +643,155 @@ export async function removeUserFromDocument(
       "INTERNAL_ERROR",
       "Failed to remove user. Please try again."
     );
+  }
+}
+
+// ============================================================================
+// COMMENT ACTIONS
+// ============================================================================
+
+/**
+ * Add a comment to a document
+ * Any user with access (owner, editor, viewer) can comment
+ */
+export async function addComment(
+  roomId: string,
+  content: string
+): Promise<ActionResponse<{ commentId: string }>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    const trimmedContent = content.trim();
+    if (!trimmedContent || trimmedContent.length > 5000) {
+      return errorResponse("VALIDATION_ERROR", "Comment must be 1-5000 characters.");
+    }
+
+    // Verify the user has access to the document
+    const userRoomRef = getUserRoomRef(user.uid, roomId);
+    const userRoomSnap = await adminDb.runTransaction(async (transaction) => {
+      return transaction.get(userRoomRef);
+    });
+
+    if (!userRoomSnap.exists) {
+      return errorResponse("FORBIDDEN", "You don't have access to this document.");
+    }
+
+    // Add the comment
+    const commentRef = adminDb
+      .collection(COLLECTIONS.DOCUMENTS)
+      .doc(roomId)
+      .collection("comments")
+      .doc();
+
+    await commentRef.set({
+      authorId: user.uid,
+      authorName: user.name || user.email || "Anonymous",
+      authorAvatar: user.picture || "",
+      content: trimmedContent,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    return successResponse({ commentId: commentRef.id });
+  } catch (error) {
+    console.error("[addComment] Error:", error);
+    if (isUnauthorizedError(error)) {
+      return errorResponse("UNAUTHORIZED", "Please sign in to comment.");
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to add comment. Please try again.");
+  }
+}
+
+/**
+ * Delete a comment from a document
+ * Users can delete their own comments. Owner can delete any comment.
+ */
+export async function deleteComment(
+  roomId: string,
+  commentId: string
+): Promise<ActionResponse<void>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    const commentRef = adminDb
+      .collection(COLLECTIONS.DOCUMENTS)
+      .doc(roomId)
+      .collection("comments")
+      .doc(commentId);
+
+    const commentSnap = await commentRef.get();
+    if (!commentSnap.exists) {
+      return errorResponse("NOT_FOUND", "Comment not found.");
+    }
+
+    const commentData = commentSnap.data();
+    const isAuthor = commentData?.authorId === user.uid;
+
+    // Check if the user is the document owner
+    let isDocOwner = false;
+    const userRoomRef = getUserRoomRef(user.uid, roomId);
+    const userRoomSnap = await userRoomRef.get();
+    if (userRoomSnap.exists) {
+      isDocOwner = userRoomSnap.data()?.role === "owner";
+    }
+
+    if (!isAuthor && !isDocOwner) {
+      return errorResponse("FORBIDDEN", "You can only delete your own comments.");
+    }
+
+    await commentRef.delete();
+
+    return successResponse();
+  } catch (error) {
+    console.error("[deleteComment] Error:", error);
+    if (isUnauthorizedError(error)) {
+      return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to delete comment. Please try again.");
+  }
+}
+
+/**
+ * Fetch all comments for a document
+ * Uses Admin SDK so Firestore rules are bypassed
+ */
+export async function getComments(
+  roomId: string
+): Promise<ActionResponse<Comment[]>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    // Verify user has access
+    const userRoomRef = getUserRoomRef(user.uid, roomId);
+    const userRoomSnap = await userRoomRef.get();
+    if (!userRoomSnap.exists) {
+      return errorResponse("FORBIDDEN", "You don't have access to this document.");
+    }
+
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.DOCUMENTS)
+      .doc(roomId)
+      .collection("comments")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const comments: Comment[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        authorId: data.authorId as string,
+        authorName: data.authorName as string,
+        authorAvatar: (data.authorAvatar as string) || undefined,
+        content: data.content as string,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+      };
+    });
+
+    return successResponse(comments);
+  } catch (error) {
+    console.error("[getComments] Error:", error);
+    if (isUnauthorizedError(error)) {
+      return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to load comments.");
   }
 }

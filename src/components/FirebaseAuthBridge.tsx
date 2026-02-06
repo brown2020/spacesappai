@@ -36,7 +36,7 @@ export default function FirebaseAuthBridge() {
 
       void (async () => {
         try {
-          const idToken = await user.getIdToken();
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
           await setServerSessionFromIdToken(idToken);
         } catch (error) {
           console.error("[FirebaseAuthBridge] Failed to sync session:", error);

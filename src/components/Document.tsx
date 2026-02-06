@@ -11,9 +11,11 @@ import ShareMenu from "./ShareMenu";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
 import { DocumentErrorBoundary } from "./ErrorBoundary";
+import CommentsPanel, { CommentsButton } from "./Comments";
 import DocumentCover from "./DocumentCover";
 import EmojiPicker from "./EmojiPicker";
 import PageIcon from "./PageIcon";
+import { useComments } from "@/hooks";
 
 // ============================================================================
 // DOCUMENT HEADER
@@ -121,11 +123,14 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
 
 interface DocumentToolbarProps {
   showAvatars: boolean;
+  onToggleComments: () => void;
+  commentCount: number;
 }
 
-function DocumentToolbar({ showAvatars }: DocumentToolbarProps) {
+function DocumentToolbar({ showAvatars, onToggleComments, commentCount }: DocumentToolbarProps) {
   return (
     <div className="flex max-w-6xl mx-auto justify-between items-center mb-5">
+      <CommentsButton onClick={onToggleComments} count={commentCount} />
       {showAvatars ? <Avatars /> : <div />}
     </div>
   );
@@ -141,30 +146,37 @@ interface DocumentProps {
 
 export default function Document({ id }: DocumentProps) {
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const { count: commentCount } = useComments(id);
 
   // Stable callback to prevent re-renders
   const handleEditorReady = useCallback(() => {
     setIsEditorReady(true);
   }, []);
 
+  const handleToggleComments = useCallback(() => {
+    setCommentsOpen((prev) => !prev);
+  }, []);
+
   return (
     <article className="flex-1 h-full bg-background p-5">
       <DocumentCover documentId={id} />
       <DocumentHeader documentId={id} />
-      <DocumentToolbar showAvatars={isEditorReady} />
+      <DocumentToolbar
+        showAvatars={isEditorReady}
+        onToggleComments={handleToggleComments}
+        commentCount={commentCount}
+      />
 
       <hr className="pb-10" />
 
-      {/* 
-        Wrap editor in error boundary to prevent crashes from breaking the whole app
-        Always render Editor inside LiveCursorProvider to prevent re-mounting
-        The onReady callback is stable so it won't cause unnecessary re-renders
-      */}
       <DocumentErrorBoundary>
         <LiveCursorProvider>
           <Editor onReady={handleEditorReady} />
         </LiveCursorProvider>
       </DocumentErrorBoundary>
+
+      <CommentsPanel isOpen={commentsOpen} onClose={() => setCommentsOpen(false)} />
     </article>
   );
 }

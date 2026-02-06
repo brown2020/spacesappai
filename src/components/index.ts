@@ -56,6 +56,7 @@ export { default as RoomProvider } from "./RoomProvider";
 // ============================================================================
 
 export { default as ClientOnly } from "./ClientOnly";
+export { default as CommentsPanel, CommentsButton } from "./Comments";
 export { default as SearchDialog } from "./SearchDialog";
 export { default as EmojiPicker } from "./EmojiPicker";
 export { default as PageIcon } from "./PageIcon";
