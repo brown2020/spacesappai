@@ -9,7 +9,7 @@ import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-se
 import { errorResponse, successResponse } from "@/lib/action-utils";
 import { getUserRoomRef, getDocumentRef, verifyOwnership } from "@/lib/firestore-helpers";
 import { normalizeEmail } from "@/lib/utils";
-import type { ActionResponse, CreateDocumentResponse } from "@/types";
+import type { ActionResponse, CreateDocumentResponse, RoomRole } from "@/types";
 
 // ============================================================================
 // DOCUMENT ACTIONS
@@ -193,13 +193,127 @@ export async function deleteDocument(
 }
 
 /**
+ * Update a document's title
+ * Any user with edit access (owner or editor) can update the title
+ */
+export async function updateDocumentTitle(
+  roomId: string,
+  title: string
+): Promise<ActionResponse<void>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    // Validate title
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || trimmedTitle.length > 500) {
+      return errorResponse("VALIDATION_ERROR", "Title must be 1-500 characters.");
+    }
+
+    await adminDb.runTransaction(async (transaction) => {
+      const userRoomRef = getUserRoomRef(user.uid, roomId);
+      const userRoomDoc = await transaction.get(userRoomRef);
+
+      if (!userRoomDoc.exists) {
+        throw new Error("FORBIDDEN");
+      }
+
+      // Viewers cannot edit the title
+      const role = userRoomDoc.data()?.role as string | undefined;
+      if (role === "viewer") {
+        throw new Error("FORBIDDEN");
+      }
+
+      const docRef = getDocumentRef(roomId);
+      const docSnapshot = await transaction.get(docRef);
+
+      if (!docSnapshot.exists) {
+        throw new Error("NOT_FOUND");
+      }
+
+      transaction.update(docRef, {
+        title: trimmedTitle,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return successResponse();
+  } catch (error) {
+    console.error("[updateDocumentTitle] Error:", error);
+    if (error instanceof Error) {
+      if (isUnauthorizedError(error)) {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
+      if (error.message === "FORBIDDEN") {
+        return errorResponse("FORBIDDEN", "You don't have permission to edit this document.");
+      }
+      if (error.message === "NOT_FOUND") {
+        return errorResponse("NOT_FOUND", "Document not found.");
+      }
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to update title. Please try again.");
+  }
+}
+
+/**
+ * Update a user's role on a document
+ * Only the owner can change roles
+ */
+export async function updateUserRole(
+  roomId: string,
+  targetUserId: string,
+  newRole: RoomRole
+): Promise<ActionResponse<void>> {
+  try {
+    const currentUser = await requireAuthenticatedUser();
+
+    if (newRole !== "editor" && newRole !== "viewer") {
+      return errorResponse("VALIDATION_ERROR", "Invalid role.");
+    }
+
+    if (targetUserId === currentUser.uid) {
+      return errorResponse("VALIDATION_ERROR", "You cannot change your own role.");
+    }
+
+    await adminDb.runTransaction(async (transaction) => {
+      await verifyOwnership(transaction, currentUser.uid, roomId);
+
+      const targetRoomRef = getUserRoomRef(targetUserId, roomId);
+      const targetRoomDoc = await transaction.get(targetRoomRef);
+
+      if (!targetRoomDoc.exists) {
+        throw new Error("NOT_FOUND");
+      }
+
+      transaction.update(targetRoomRef, { role: newRole });
+    });
+
+    return successResponse();
+  } catch (error) {
+    console.error("[updateUserRole] Error:", error);
+    if (error instanceof Error) {
+      if (isUnauthorizedError(error)) {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
+      if (error.message === "FORBIDDEN") {
+        return errorResponse("FORBIDDEN", "Only the document owner can change roles.");
+      }
+      if (error.message === "NOT_FOUND") {
+        return errorResponse("NOT_FOUND", "User not found on this document.");
+      }
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to update role. Please try again.");
+  }
+}
+
+/**
  * Invite a user to collaborate on a document
  * Only the owner can invite users
  * Uses transaction to prevent race conditions with duplicate invites
  */
 export async function inviteUserToDocument(
   roomId: string,
-  email: string
+  email: string,
+  role: RoomRole = "editor"
 ): Promise<ActionResponse<void>> {
   try {
     const currentUser = await requireAuthenticatedUser();
@@ -242,11 +356,14 @@ export async function inviteUserToDocument(
         throw new Error("ALREADY_EXISTS");
       }
 
+      // Validate the role is editor or viewer
+      const assignedRole = role === "viewer" ? "viewer" : "editor";
+
       // Create room entry for the invited user
       transaction.set(inviteeRoomRef, {
         userId: invitee.uid,
         userEmail: normalizedEmail,
-        role: "editor",
+        role: assignedRole,
         createdAt: FieldValue.serverTimestamp(),
         roomId,
       });
@@ -279,6 +396,51 @@ export async function inviteUserToDocument(
       "INTERNAL_ERROR",
       "Failed to invite user. Please try again."
     );
+  }
+}
+
+/**
+ * Toggle whether a document is published (publicly accessible)
+ * Only the owner can publish/unpublish
+ */
+export async function togglePublishDocument(
+  roomId: string,
+  publish: boolean
+): Promise<ActionResponse<void>> {
+  try {
+    const user = await requireAuthenticatedUser();
+
+    await adminDb.runTransaction(async (transaction) => {
+      await verifyOwnership(transaction, user.uid, roomId);
+
+      const docRef = getDocumentRef(roomId);
+      const docSnapshot = await transaction.get(docRef);
+
+      if (!docSnapshot.exists) {
+        throw new Error("NOT_FOUND");
+      }
+
+      transaction.update(docRef, {
+        isPublished: publish,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return successResponse();
+  } catch (error) {
+    console.error("[togglePublishDocument] Error:", error);
+    if (error instanceof Error) {
+      if (isUnauthorizedError(error)) {
+        return errorResponse("UNAUTHORIZED", "Please sign in to continue.");
+      }
+      if (error.message === "FORBIDDEN") {
+        return errorResponse("FORBIDDEN", "Only the document owner can publish.");
+      }
+      if (error.message === "NOT_FOUND") {
+        return errorResponse("NOT_FOUND", "Document not found.");
+      }
+    }
+    return errorResponse("INTERNAL_ERROR", "Failed to update publish status. Please try again.");
   }
 }
 

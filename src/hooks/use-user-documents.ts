@@ -33,7 +33,7 @@ export function useUserDocuments(): UseUserDocumentsReturn {
 
   const documents = useMemo<GroupedRoomDocuments>(() => {
     if (!snapshot?.docs) {
-      return { owner: [], editor: [] };
+      return { owner: [], editor: [], viewer: [] };
     }
 
     return snapshot.docs.reduce<GroupedRoomDocuments>(
@@ -45,17 +45,22 @@ export function useUserDocuments(): UseUserDocumentsReturn {
 
         if (roomData.role === "owner") {
           acc.owner.push(roomData);
+        } else if (roomData.role === "viewer") {
+          acc.viewer.push(roomData);
         } else {
           acc.editor.push(roomData);
         }
 
         return acc;
       },
-      { owner: [], editor: [] }
+      { owner: [], editor: [], viewer: [] }
     );
   }, [snapshot]);
 
-  const isEmpty = documents.owner.length === 0 && documents.editor.length === 0;
+  const isEmpty =
+    documents.owner.length === 0 &&
+    documents.editor.length === 0 &&
+    documents.viewer.length === 0;
 
   return {
     documents,

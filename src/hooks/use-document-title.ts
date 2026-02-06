@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
+import { updateDocumentTitle } from "@/lib/documentActions";
 import { useIsMounted } from "./use-is-mounted";
 
 interface UseDocumentTitleReturn {
@@ -96,10 +97,10 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
     updateInFlightRef.current = true;
 
     try {
-      await updateDoc(docRef, {
-        title: trimmedTitle,
-        updatedAt: new Date(),
-      });
+      const result = await updateDocumentTitle(documentId, trimmedTitle);
+      if (!result.success) {
+        throw new Error(result.error.message);
+      }
       // After successful update, allow remote updates again
       hasUserEditedRef.current = false;
     } catch (err) {
@@ -122,7 +123,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [docRef]);
+  }, [documentId]);
 
   return {
     title,

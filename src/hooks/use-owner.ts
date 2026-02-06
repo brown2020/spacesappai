@@ -9,8 +9,12 @@ import { auth as firebaseAuth, COLLECTIONS, db } from "@/firebase/firebaseConfig
 import type { RoomDocument, RoomRole } from "@/types";
 
 interface UseOwnerReturn {
+  /** The current user's role for this room */
+  role: RoomRole | undefined;
   /** Whether the current user is the owner. Note: returns false while loading */
   isOwner: boolean;
+  /** Whether the current user can edit (owner or editor, not viewer) */
+  canEdit: boolean;
   /** Whether the user data is still loading */
   isLoading: boolean;
   /** 
@@ -48,6 +52,7 @@ export function useOwner(): UseOwnerReturn {
     | undefined;
 
   const isOwner = role === "owner";
+  const canEdit = role === "owner" || role === "editor";
   const isLoading = isAuthLoading || isRoomLoading;
   const isReady = !isLoading && !!user && !authError && !roomError;
 
@@ -71,6 +76,6 @@ export function useOwner(): UseOwnerReturn {
     });
   }
 
-  return { isOwner, isLoading, isReady };
+  return { role, isOwner, canEdit, isLoading, isReady };
 }
 

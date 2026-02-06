@@ -11,6 +11,7 @@ rules_version = '2';
 // Roles:
 //   owner  - Can read, write, delete document; manage users
 //   editor - Can read and write document content
+//   viewer - Can read document content only
 //
 // Copy this entire file to Firebase Console > Firestore > Rules
 // ============================================================================
@@ -52,9 +53,13 @@ service cloud.firestore {
       return hasRoomAccess(documentId) && getUserRole(documentId) == 'editor';
     }
 
-    // Check if user can read/write a document (owner or editor).
-    // Uses a single hasRoomAccess + getUserRole check to minimize read operations.
-    function canAccessDocument(documentId) {
+    // Check if user can read a document (any role).
+    function canReadDocument(documentId) {
+      return hasRoomAccess(documentId);
+    }
+
+    // Check if user can write a document (owner or editor, not viewer).
+    function canWriteDocument(documentId) {
       return hasRoomAccess(documentId)
         && (getUserRole(documentId) == 'owner' || getUserRole(documentId) == 'editor');
     }
@@ -67,7 +72,9 @@ service cloud.firestore {
         && data.title.size() > 0
         && data.title.size() <= 500
         // icon is optional, but if present must be null or a string <= 10 chars (emoji)
-        && (!('icon' in data.keys()) || data.icon == null || (data.icon is string && data.icon.size() <= 10));
+        && (!('icon' in data.keys()) || data.icon == null || (data.icon is string && data.icon.size() <= 10))
+        // isPublished is optional, but if present must be a boolean
+        && (!('isPublished' in data.keys()) || data.isPublished is bool);
     }
 
     // Validate room data
@@ -75,7 +82,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasAll(['userId', 'role', 'roomId', 'createdAt'])
         && data.userId is string
-        && data.role in ['owner', 'editor']
+        && data.role in ['owner', 'editor', 'viewer']
         && data.roomId is string;
     }
 
@@ -84,17 +91,17 @@ service cloud.firestore {
     // ========================================================================
 
     match /documents/{documentId} {
-      // Allow read if user has room access (owner or editor)
-      allow read: if isAuthenticated() && canAccessDocument(documentId);
+      // Allow read if user has any room access (owner, editor, or viewer)
+      allow read: if isAuthenticated() && canReadDocument(documentId);
 
       // Allow create if authenticated with valid data
       // Note: Document creation is primarily handled by server actions with admin SDK,
       // but we validate client-side creates as a defense-in-depth measure.
       allow create: if isAuthenticated() && isValidDocumentData();
 
-      // Allow update if user has access (owner or editor can edit)
+      // Allow update if user can write (owner or editor, not viewer)
       allow update: if isAuthenticated()
-        && canAccessDocument(documentId)
+        && canWriteDocument(documentId)
         && isValidDocumentData();
 
       // Allow delete only if user is the owner
@@ -124,10 +131,10 @@ service cloud.firestore {
             (getUserId() == uid
               && request.resource.data.userId == uid
               && request.resource.data.role == 'owner')
-            // OR being invited by the document owner
+            // OR being invited by the document owner as editor or viewer
             || (isOwner(roomId)
               && request.resource.data.userId == uid
-              && request.resource.data.role == 'editor')
+              && request.resource.data.role in ['editor', 'viewer'])
           );
 
         // Only owners can update room entries (e.g., change roles)

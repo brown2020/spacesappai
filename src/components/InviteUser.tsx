@@ -9,6 +9,13 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -16,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { RoomRole } from "@/types";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -26,6 +34,7 @@ export default function InviteUser() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<RoomRole>("editor");
   const [error, setError] = useState("");
 
   const handleInvite = (e: React.FormEvent) => {
@@ -46,13 +55,15 @@ export default function InviteUser() {
     startTransition(async () => {
       const result = await inviteUserToDocument(
         roomId,
-        normalizeEmail(email)
+        normalizeEmail(email),
+        role
       );
 
       if (result.success) {
         setIsOpen(false);
         setEmail("");
-        toast.success(`Invited ${email} successfully`);
+        setRole("editor");
+        toast.success(`Invited ${email} as ${role}`);
       } else {
         toast.error(result.error.message);
       }
@@ -63,6 +74,7 @@ export default function InviteUser() {
     setIsOpen(open);
     if (!open) {
       setEmail("");
+      setRole("editor");
       setError("");
     }
   };
@@ -110,7 +122,17 @@ export default function InviteUser() {
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            <Select value={role} onValueChange={(v) => setRole(v as RoomRole)}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button
               type="button"
               variant="outline"

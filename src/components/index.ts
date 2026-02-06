@@ -22,6 +22,7 @@ export { default as Editor } from "./Editor";
 export { default as DeleteDocument } from "./DeleteDocument";
 export { default as InviteUser } from "./InviteUser";
 export { default as ManageUsers } from "./ManageUsers";
+export { default as ShareMenu } from "./ShareMenu";
 export { default as NewDocumentButton } from "./NewDocumentButton";
 export { default as SidebarOption } from "./SidebarOption";
 
@@ -54,6 +55,7 @@ export { default as RoomProvider } from "./RoomProvider";
 // ============================================================================
 
 export { default as ClientOnly } from "./ClientOnly";
+export { default as SearchDialog } from "./SearchDialog";
 export { default as EmojiPicker } from "./EmojiPicker";
 export { default as PageIcon } from "./PageIcon";
 export { default as FirebaseAuthBridge } from "./FirebaseAuthBridge";

@@ -28,15 +28,6 @@ export async function POST(req: Request) {
     // Verify the client token, then mint an HttpOnly session cookie for SSR / server actions.
     const decoded = await adminAuth.verifyIdToken(idToken);
 
-    // Reject tokens older than 5 minutes to limit stolen-token window
-    const fiveMinutesAgo = Date.now() / 1000 - 5 * 60;
-    if (decoded.auth_time < fiveMinutesAgo) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Token too old. Please sign in again." },
-        { status: 401, headers: { "Cache-Control": "no-store" } }
-      );
-    }
-
     const sessionCookie = await adminAuth.createSessionCookie(idToken, {
       expiresIn: FIVE_DAYS_MS,
     });

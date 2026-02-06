@@ -14,7 +14,7 @@ export interface LiveblocksUserInfo {
 /**
  * Room roles for document access control
  */
-export type RoomRole = "owner" | "editor";
+export type RoomRole = "owner" | "editor" | "viewer";
 
 /**
  * Room document stored in Firestore.
@@ -37,6 +37,7 @@ export interface SpaceDocument {
   id: string;
   title: string;
   icon?: string | null;
+  isPublished?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -47,6 +48,7 @@ export interface SpaceDocument {
 export interface GroupedRoomDocuments {
   owner: RoomDocument[];
   editor: RoomDocument[];
+  viewer: RoomDocument[];
 }
 
 // ============================================================================

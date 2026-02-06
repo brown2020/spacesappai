@@ -11,7 +11,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
 import { useTheme } from "next-themes";
-import { useLatest } from "@/hooks";
+import { useLatest, useOwner } from "@/hooks";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
 import stringToColor from "@/lib/stringToColor";
@@ -32,6 +32,7 @@ interface BlockNoteProps {
   doc: Y.Doc;
   provider: LiveblocksYjsProvider;
   darkMode: boolean;
+  editable: boolean;
   onReady?: () => void;
   userName?: string;
   userEmail?: string;
@@ -41,6 +42,7 @@ function BlockNote({
   doc,
   provider,
   darkMode,
+  editable,
   onReady,
   userName,
   userEmail,
@@ -120,6 +122,7 @@ function BlockNote({
         className="min-h-screen"
         editor={editor}
         theme={darkMode ? "dark" : "light"}
+        editable={editable}
       />
     </div>
   );
@@ -171,6 +174,7 @@ interface EditorProps {
 export default function Editor({ onReady }: EditorProps) {
   const room = useRoom();
   const userInfo = useSelf((me) => me.info);
+  const { canEdit } = useOwner();
 
   const { resolvedTheme, setTheme } = useTheme();
   const darkMode = resolvedTheme === "dark";
@@ -213,16 +217,19 @@ export default function Editor({ onReady }: EditorProps) {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <EditorToolbar
-        doc={doc}
-        darkMode={darkMode}
-        onToggleDarkMode={handleToggleDarkMode}
-      />
+      {canEdit && (
+        <EditorToolbar
+          doc={doc}
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+        />
+      )}
 
       <BlockNote
         doc={doc}
         provider={provider}
         darkMode={darkMode}
+        editable={canEdit}
         onReady={onReady}
         userName={userInfo?.name}
         userEmail={userInfo?.email}

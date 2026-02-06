@@ -7,8 +7,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import Editor from "./Editor";
 import DeleteDocument from "./DeleteDocument";
-import InviteUser from "./InviteUser";
-import ManageUsers from "./ManageUsers";
+import ShareMenu from "./ShareMenu";
 import LiveCursorProvider from "./LiveCursorProvider";
 import Avatars from "./Avatars";
 import { DocumentErrorBoundary } from "./ErrorBoundary";
@@ -27,7 +26,7 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
   const { title, setTitle, updateTitle, isUpdating } =
     useDocumentTitle(documentId);
   const { icon, updateIcon } = useDocumentIcon(documentId);
-  const { isOwner, isReady } = useOwner();
+  const { isOwner, canEdit, isReady } = useOwner();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -63,41 +62,53 @@ function DocumentHeader({ documentId }: DocumentHeaderProps) {
   return (
     <div className="flex max-w-6xl mx-auto justify-between pb-5">
       <div className="flex flex-1 gap-2 items-center">
-        {/* Icon picker */}
-        <EmojiPicker
-          onSelect={handleIconSelect}
-          onRemove={handleIconRemove}
-          currentEmoji={icon}
-        >
-          <button
-            type="button"
-            className="flex items-center justify-center w-10 h-10 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-            aria-label="Choose page icon"
+        {/* Icon picker — only for users who can edit */}
+        {canEdit ? (
+          <EmojiPicker
+            onSelect={handleIconSelect}
+            onRemove={handleIconRemove}
+            currentEmoji={icon}
           >
+            <button
+              type="button"
+              className="flex items-center justify-center w-10 h-10 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+              aria-label="Choose page icon"
+            >
+              <PageIcon icon={icon} size="md" />
+            </button>
+          </EmojiPicker>
+        ) : (
+          <div className="flex items-center justify-center w-10 h-10">
             <PageIcon icon={icon} size="md" />
-          </button>
-        </EmojiPicker>
+          </div>
+        )}
 
-        <form className="flex flex-1 gap-2" onSubmit={handleSubmit}>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Document title"
-            aria-label="Document title"
-          />
+        {canEdit ? (
+          <form className="flex flex-1 gap-2" onSubmit={handleSubmit}>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Document title"
+              aria-label="Document title"
+            />
 
-          <Button disabled={isUpdating || !title.trim()} type="submit">
-            {isUpdating ? "Updating..." : "Update"}
-          </Button>
+            <Button disabled={isUpdating || !title.trim()} type="submit">
+              {isUpdating ? "Updating..." : "Update"}
+            </Button>
 
-          {/* Show owner controls only after ownership check completes to prevent flash */}
-          {isReady && isOwner && (
-            <>
-              <InviteUser />
-              <DeleteDocument />
-            </>
-          )}
-        </form>
+            {/* Share menu for all users, delete for owners only */}
+            {isReady && (
+              <>
+                <ShareMenu />
+                {isOwner && <DeleteDocument />}
+              </>
+            )}
+          </form>
+        ) : (
+          <h1 className="text-lg font-semibold truncate flex-1">
+            {title || "Untitled"}
+          </h1>
+        )}
       </div>
     </div>
   );
@@ -114,8 +125,7 @@ interface DocumentToolbarProps {
 function DocumentToolbar({ showAvatars }: DocumentToolbarProps) {
   return (
     <div className="flex max-w-6xl mx-auto justify-between items-center mb-5">
-      <ManageUsers />
-      {showAvatars && <Avatars />}
+      {showAvatars ? <Avatars /> : <div />}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs";
+import SearchDialog from "./SearchDialog";
 import { toast } from "sonner";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -137,12 +139,30 @@ function UserActions({ user, isLoading }: UserActionsProps) {
 
 export default function Header() {
   const [user, isLoading] = useAuthState(firebaseAuth);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Global Cmd+K / Ctrl+K shortcut to open search
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      setSearchOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-brand to-brand/80 text-brand-foreground shadow-lg">
-      <HeaderLogo userName={user?.displayName || undefined} />
-      <HeaderNav />
-      <UserActions user={user} isLoading={isLoading} />
-    </header>
+    <>
+      <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-brand to-brand/80 text-brand-foreground shadow-lg">
+        <HeaderLogo userName={user?.displayName || undefined} />
+        <HeaderNav />
+        <UserActions user={user} isLoading={isLoading} />
+      </header>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+    </>
   );
 }

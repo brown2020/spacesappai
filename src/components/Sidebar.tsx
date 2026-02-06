@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MenuIcon, FileText } from "lucide-react";
+import { MenuIcon, FileText, Search } from "lucide-react";
 import { useUserDocuments } from "@/hooks";
 import NewDocumentButton from "./NewDocumentButton";
 import SidebarOption from "./SidebarOption";
+import SearchDialog from "./SearchDialog";
 import ClientOnly from "./ClientOnly";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -56,10 +58,26 @@ function EmptyState() {
 
 function SidebarMenuContent() {
   const { documents, isEmpty, isLoading, error } = useUserDocuments();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
       <NewDocumentButton />
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-start gap-2 text-muted-foreground font-normal"
+        onClick={() => setSearchOpen(true)}
+      >
+        <Search className="h-4 w-4" />
+        <span className="flex-1 text-left">Search</span>
+        <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] bg-muted rounded border font-mono">
+          ⌘K
+        </kbd>
+      </Button>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       <nav className="flex flex-col gap-4 md:max-w-36">
         {isLoading && <LoadingSkeleton />}
@@ -98,14 +116,14 @@ function SidebarMenuContent() {
           </section>
         )}
 
-        {/* Shared With Me Section */}
-        {!isLoading && documents.editor.length > 0 && (
+        {/* Shared With Me Section (editors + viewers) */}
+        {!isLoading && (documents.editor.length > 0 || documents.viewer.length > 0) && (
           <section>
             <h2 className="text-muted-foreground font-semibold text-sm mb-2">
               Shared with me
             </h2>
             <ul className="flex flex-col gap-2">
-              {documents.editor.map((doc) =>
+              {[...documents.editor, ...documents.viewer].map((doc) =>
                 doc.id ? (
                   <li key={doc.id}>
                     <SidebarOption href={`/doc/${doc.id}`} id={doc.id} />

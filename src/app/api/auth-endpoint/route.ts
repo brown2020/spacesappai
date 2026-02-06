@@ -26,7 +26,12 @@ interface ErrorResponse {
  * Validates both the user's room entry and the actual document existence
  * to prevent access to stale/deleted documents
  */
-async function hasRoomAccess(userId: string, roomId: string): Promise<boolean> {
+interface RoomAccessResult {
+  hasAccess: boolean;
+  role?: string;
+}
+
+async function checkRoomAccess(userId: string, roomId: string): Promise<RoomAccessResult> {
   // Check both room access and document existence in parallel
   const [roomDoc, documentDoc] = await Promise.all([
     adminDb
@@ -38,8 +43,12 @@ async function hasRoomAccess(userId: string, roomId: string): Promise<boolean> {
     adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId).get(),
   ]);
 
-  // User must have a room entry AND the document must exist
-  return roomDoc.exists && documentDoc.exists;
+  if (!roomDoc.exists || !documentDoc.exists) {
+    return { hasAccess: false };
+  }
+
+  const role = roomDoc.data()?.role as string | undefined;
+  return { hasAccess: true, role };
 }
 
 /**
@@ -82,8 +91,8 @@ export async function POST(req: NextRequest) {
       return apiErrorResponse(400, "Bad Request", "Room ID cannot be empty");
     }
 
-    // Check room access (efficient single document lookup)
-    const hasAccess = await hasRoomAccess(user.uid, roomId);
+    // Check room access and get role
+    const { hasAccess, role } = await checkRoomAccess(user.uid, roomId);
 
     if (!hasAccess) {
       return apiErrorResponse(
@@ -102,8 +111,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Grant full access to the room
-    session.allow(roomId, session.FULL_ACCESS);
+    // Grant access based on role — viewers get read-only, others get full access
+    if (role === "viewer") {
+      session.allow(roomId, session.READ_ACCESS);
+    } else {
+      session.allow(roomId, session.FULL_ACCESS);
+    }
 
     // Authorize and return response
     const { body: authBody, status } = await session.authorize();

@@ -4,8 +4,15 @@ import { useState, useTransition } from "react";
 import { useRoom } from "@liveblocks/react/suspense";
 import { toast } from "sonner";
 import { useRoomUsers, useOwner, useIsMounted } from "@/hooks";
-import { removeUserFromDocument } from "@/lib/documentActions";
+import { removeUserFromDocument, updateUserRole } from "@/lib/documentActions";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { RoomRole } from "@/types";
 
 // ============================================================================
 // USER LIST ITEM
@@ -26,6 +34,7 @@ interface UserListItemProps {
   isCurrentUser: boolean;
   isOwner: boolean;
   onRemove: () => void;
+  onRoleChange: (newRole: RoomRole) => void;
   isRemoving: boolean;
 }
 
@@ -36,19 +45,33 @@ function UserListItem({
   isCurrentUser,
   isOwner,
   onRemove,
+  onRoleChange,
   isRemoving,
 }: UserListItemProps) {
   const displayName = isCurrentUser ? `You (${label})` : label;
   const canRemove = isOwner && !isCurrentUser;
+  const canChangeRole = isOwner && !isCurrentUser && role !== "owner";
 
   return (
     <div className="flex items-center justify-between py-2">
       <p className="text-sm truncate flex-1">{displayName}</p>
 
       <div className="flex items-center gap-2 shrink-0">
-        <span className="px-2 py-1 text-xs bg-muted rounded-md capitalize">
-          {role}
-        </span>
+        {canChangeRole ? (
+          <Select value={role} onValueChange={(v) => onRoleChange(v as RoomRole)}>
+            <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="editor">Editor</SelectItem>
+              <SelectItem value="viewer">Viewer</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="px-2 py-1 text-xs bg-muted rounded-md capitalize">
+            {role}
+          </span>
+        )}
 
         {canRemove && (
           <Button
@@ -79,6 +102,19 @@ export default function ManageUsers() {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   // Track if component is mounted to prevent state updates after unmount
   const isMountedRef = useIsMounted();
+
+  const handleRoleChange = (userId: string, newRole: RoomRole) => {
+    startTransition(async () => {
+      const result = await updateUserRole(room.id, userId, newRole);
+      if (isMountedRef.current) {
+        if (result.success) {
+          toast.success("Role updated");
+        } else {
+          toast.error(result.error.message);
+        }
+      }
+    });
+  };
 
   const handleRemoveUser = (userId: string) => {
     setRemovingUserId(userId);
@@ -133,6 +169,7 @@ export default function ManageUsers() {
                   isCurrentUser={user.userId === currentUserId}
                   isOwner={isOwner}
                   onRemove={() => handleRemoveUser(user.userId)}
+                  onRoleChange={(newRole) => handleRoleChange(user.userId, newRole)}
                   isRemoving={removingUserId === user.userId}
                 />
               ))}
