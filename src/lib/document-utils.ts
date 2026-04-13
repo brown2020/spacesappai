@@ -25,13 +25,4 @@ export function getDocumentContent(doc: Y.Doc): string | null {
     : null;
 }
 
-/**
- * Check if a Yjs document has content
- *
- * @param doc - The Yjs document
- * @returns true if the document has content
- */
-export function hasDocumentContent(doc: Y.Doc): boolean {
-  return getDocumentContent(doc) !== null;
-}
 

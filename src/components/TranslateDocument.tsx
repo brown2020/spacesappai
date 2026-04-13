@@ -49,7 +49,7 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
       errorMessage="Failed to translate. Please try again."
       emptyDocumentMessage="Document is empty. Add some content before translating."
       onSubmit={(content, modelName) => {
-        if (!language) return Promise.resolve();
+        if (!language) return Promise.reject(new Error("Language is required"));
         return generateSummary(content, language, modelName);
       }}
     >

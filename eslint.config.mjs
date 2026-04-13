@@ -5,6 +5,9 @@ const config = [
   ...coreWebVitals,
   ...typescript,
   {
+    settings: {
+      react: { version: '19' },
+    },
     rules: {
       'react-hooks/set-state-in-effect': 'off',
     },

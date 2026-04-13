@@ -123,7 +123,7 @@ export function useDocumentTitle(documentId: string): UseDocumentTitleReturn {
         timeoutRef.current = null;
       }, 500);
     }
-  }, [documentId]);
+  }, [documentId, isMountedRef]);
 
   return {
     title,
