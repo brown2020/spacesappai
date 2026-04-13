@@ -57,7 +57,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "yjs": "^13.6.30",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "cookies-next": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",

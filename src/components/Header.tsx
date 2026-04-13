@@ -7,6 +7,7 @@ import Breadcrumbs from "./Breadcrumbs";
 import SearchDialog from "./SearchDialog";
 import { toast } from "sonner";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { deleteCookie } from "cookies-next";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -93,6 +94,14 @@ function UserActions({ user, isLoading }: UserActionsProps) {
 
   const handleSignOut = async () => {
     try {
+      // 1. Delete the server-managed httpOnly session cookie
+      await fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
+
+      // 2. Explicitly delete any client-readable auth cookies
+      deleteCookie("__session", { path: "/" });
+      deleteCookie("authToken", { path: "/" });
+
+      // 3. Sign out from Firebase
       await signOut(firebaseAuth);
     } catch (err) {
       console.error("[Header] signOut error:", err);
