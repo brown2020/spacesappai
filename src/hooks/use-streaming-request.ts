@@ -168,7 +168,7 @@ export function useStreamingRequest(
         }
       }
     },
-    [successMessage, errorMessage]
+    [successMessage, errorMessage, isMountedRef]
   );
 
   return { isPending, result, reset, execute };
