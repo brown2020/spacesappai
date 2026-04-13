@@ -38,18 +38,8 @@ function xmlFragmentToHtml(fragment: Y.XmlFragment): string {
 
 function xmlElementToHtml(element: Y.XmlElement): string {
   const tag = element.nodeName;
-  const attrs = element.getAttributes();
 
-  // Build attribute string
-  let attrStr = "";
-  for (const [key, value] of Object.entries(attrs)) {
-    if (key === "blockType" || key === "id") continue;
-    if (typeof value === "string") {
-      attrStr += ` ${key}="${escapeHtml(value)}"`;
-    }
-  }
-
-  // Get inner content
+  // Get inner content regardless of whether tag is safe
   let inner = "";
   for (let i = 0; i < element.length; i++) {
     const child = element.get(i);
@@ -57,6 +47,28 @@ function xmlElementToHtml(element: Y.XmlElement): string {
       inner += xmlElementToHtml(child);
     } else if (child instanceof Y.XmlText) {
       inner += xmlTextToHtml(child);
+    }
+  }
+
+  // If tag is not in allowlist, render only inner content (strip the tag)
+  if (!SAFE_TAGS.has(tag)) {
+    return inner;
+  }
+
+  // Build attribute string using allowlisted attributes only
+  const attrs = element.getAttributes();
+  const allowedAttrs = SAFE_ATTRS[tag];
+  let attrStr = "";
+  if (allowedAttrs) {
+    for (const [key, value] of Object.entries(attrs)) {
+      if (!allowedAttrs.has(key)) continue;
+      if (typeof value === "string") {
+        // Block javascript: and data: URIs in href/src attributes
+        if ((key === "href" || key === "src") && /^\s*(javascript|data):/i.test(value)) {
+          continue;
+        }
+        attrStr += ` ${key}="${escapeHtml(value)}"`;
+      }
     }
   }
 
@@ -91,8 +103,23 @@ function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
+
+const SAFE_TAGS = new Set([
+  "p", "div", "span", "br", "hr",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "ul", "ol", "li",
+  "strong", "em", "u", "s", "code", "pre", "blockquote",
+  "table", "thead", "tbody", "tr", "th", "td",
+  "a", "img",
+]);
+
+const SAFE_ATTRS: Record<string, Set<string>> = {
+  a: new Set(["href", "title"]),
+  img: new Set(["src", "alt", "width", "height"]),
+};
 
 // ============================================================================
 // PUBLIC PAGE
@@ -120,7 +147,8 @@ export default async function PublicDocumentPage({ params }: PublicPageProps) {
 
   const title = (docData.title as string) || "Untitled";
   const icon = (docData.icon as string | null) ?? null;
-  const coverImage = (docData.coverImage as string | null) ?? null;
+  const rawCoverImage = (docData.coverImage as string | null) ?? null;
+  const coverImage = rawCoverImage?.startsWith("https://") ? rawCoverImage : null;
 
   // Fetch the Yjs binary from Liveblocks
   let contentHtml = "";

@@ -56,26 +56,6 @@ export function useOwner(): UseOwnerReturn {
   const isLoading = isAuthLoading || isRoomLoading;
   const isReady = !isLoading && !!user && !authError && !roomError;
 
-  // Optional debug (client-only)
-  if (
-    process.env.NODE_ENV !== "production" &&
-    typeof window !== "undefined" &&
-    window.location.search.includes("debugOwner=1")
-  ) {
-    console.log("[useOwner]", {
-      roomId: room.id,
-      uid: user?.uid ?? null,
-      isAuthLoading,
-      isRoomLoading,
-      authError: authError ? String(authError) : null,
-      roomError: roomError ? String(roomError) : null,
-      roomDocExists: roomSnap?.exists() ?? null,
-      role: role ?? null,
-      isOwner,
-      isReady,
-    });
-  }
-
   return { role, isOwner, canEdit, isLoading, isReady };
 }
 

@@ -537,6 +537,11 @@ export async function updateDocumentIcon(
         throw new Error("FORBIDDEN");
       }
 
+      const role = userRoomDoc.data()?.role as string | undefined;
+      if (role === "viewer") {
+        throw new Error("FORBIDDEN");
+      }
+
       // Get the document to ensure it exists
       const docRef = getDocumentRef(roomId);
       const docSnapshot = await transaction.get(docRef);
@@ -666,29 +671,28 @@ export async function addComment(
       return errorResponse("VALIDATION_ERROR", "Comment must be 1-5000 characters.");
     }
 
-    // Verify the user has access to the document
+    // Verify access and add comment atomically
     const userRoomRef = getUserRoomRef(user.uid, roomId);
-    const userRoomSnap = await adminDb.runTransaction(async (transaction) => {
-      return transaction.get(userRoomRef);
-    });
-
-    if (!userRoomSnap.exists) {
-      return errorResponse("FORBIDDEN", "You don't have access to this document.");
-    }
-
-    // Add the comment
     const commentRef = adminDb
       .collection(COLLECTIONS.DOCUMENTS)
       .doc(roomId)
       .collection("comments")
       .doc();
 
-    await commentRef.set({
-      authorId: user.uid,
-      authorName: user.name || user.email || "Anonymous",
-      authorAvatar: user.picture || "",
-      content: trimmedContent,
-      createdAt: FieldValue.serverTimestamp(),
+    await adminDb.runTransaction(async (transaction) => {
+      const userRoomSnap = await transaction.get(userRoomRef);
+
+      if (!userRoomSnap.exists) {
+        throw new Error("FORBIDDEN");
+      }
+
+      transaction.set(commentRef, {
+        authorId: user.uid,
+        authorName: user.name || user.email || "Anonymous",
+        authorAvatar: user.picture || "",
+        content: trimmedContent,
+        createdAt: FieldValue.serverTimestamp(),
+      });
     });
 
     return successResponse({ commentId: commentRef.id });
@@ -696,6 +700,9 @@ export async function addComment(
     console.error("[addComment] Error:", error);
     if (isUnauthorizedError(error)) {
       return errorResponse("UNAUTHORIZED", "Please sign in to comment.");
+    }
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return errorResponse("FORBIDDEN", "You don't have access to this document.");
     }
     return errorResponse("INTERNAL_ERROR", "Failed to add comment. Please try again.");
   }
@@ -726,13 +733,15 @@ export async function deleteComment(
     const commentData = commentSnap.data();
     const isAuthor = commentData?.authorId === user.uid;
 
-    // Check if the user is the document owner
-    let isDocOwner = false;
+    // Verify the user has access to this document
     const userRoomRef = getUserRoomRef(user.uid, roomId);
     const userRoomSnap = await userRoomRef.get();
-    if (userRoomSnap.exists) {
-      isDocOwner = userRoomSnap.data()?.role === "owner";
+    if (!userRoomSnap.exists) {
+      return errorResponse("FORBIDDEN", "You don't have access to this document.");
     }
+
+    // Check if the user is the document owner
+    const isDocOwner = userRoomSnap.data()?.role === "owner";
 
     if (!isAuthor && !isDocOwner) {
       return errorResponse("FORBIDDEN", "You can only delete your own comments.");

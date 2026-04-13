@@ -1,12 +1,3 @@
-/**
- * Liveblocks user info for real-time presence
- */
-export interface LiveblocksUserInfo {
-  name: string;
-  email: string;
-  avatar: string;
-}
-
 // ============================================================================
 // DOCUMENT & ROOM TYPES
 // ============================================================================
@@ -28,19 +19,6 @@ export interface RoomDocument {
   roomId: string;
   userId: string;
   userEmail?: string;
-}
-
-/**
- * Document stored in Firestore
- */
-export interface SpaceDocument {
-  id: string;
-  title: string;
-  icon?: string | null;
-  coverImage?: string | null;
-  isPublished?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 /**
@@ -142,35 +120,10 @@ export interface ChildrenProps {
 }
 
 /**
- * Props for room-aware components
- */
-export interface RoomProps {
-  roomId: string;
-}
-
-/**
  * Props for document-aware components
  */
 export interface DocumentProps {
   id: string;
 }
 
-// ============================================================================
-// PRESENCE TYPES (Liveblocks)
-// ============================================================================
-
-/**
- * Cursor position for real-time collaboration
- */
-export interface CursorPosition {
-  x: number;
-  y: number;
-}
-
-/**
- * User presence state
- */
-export interface UserPresence {
-  cursor: CursorPosition | null;
-}
 

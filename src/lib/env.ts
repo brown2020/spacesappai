@@ -61,69 +61,10 @@ export const serverEnv = {
 } as const;
 
 // ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
-/**
- * Validates that a required environment variable is present
- */
-export function requireEnv(name: string, value: string | undefined): string {
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
-
-/**
- * Validates client-side environment variables
- * Call this in a client component to ensure env vars are present
- */
-export function validateClientEnv(): void {
-  const required = [
-    ["NEXT_PUBLIC_FIREBASE_APIKEY", clientEnv.firebase.apiKey],
-    ["NEXT_PUBLIC_FIREBASE_PROJECTID", clientEnv.firebase.projectId],
-    ["NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY", clientEnv.liveblocks.publicKey],
-  ] as const;
-
-  const missing: string[] = [];
-  for (const [name, value] of required) {
-    if (!value) {
-      missing.push(name);
-    }
-  }
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required client environment variables: ${missing.join(", ")}`
-    );
-  }
-}
-
-/**
- * Validates server-side environment variables
- * Call this on server startup
- */
-export function validateServerEnv(): void {
-  const required = [
-    ["FIREBASE_PROJECT_ID", serverEnv.firebase.projectId],
-    ["FIREBASE_PRIVATE_KEY", serverEnv.firebase.privateKey],
-    ["FIREBASE_CLIENT_EMAIL", serverEnv.firebase.clientEmail],
-    ["LIVEBLOCKS_PRIVATE_KEY", serverEnv.liveblocks.secretKey],
-  ] as const;
-
-  for (const [name, value] of required) {
-    if (!value) {
-      throw new Error(`Missing required server environment variable: ${name}`);
-    }
-  }
-}
-
-// ============================================================================
 // ENVIRONMENT CHECKS
 // ============================================================================
 
-export const isDev = process.env.NODE_ENV === "development";
 export const isProd = process.env.NODE_ENV === "production";
-export const isTest = process.env.NODE_ENV === "test";
 
 
 

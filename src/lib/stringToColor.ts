@@ -59,22 +59,3 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
 }
 
-/**
- * Generate a color with specified lightness
- * Useful when you need colors that work well on specific backgrounds
- *
- * @param str - The input string
- * @param lightness - Target lightness (0-100), defaults to 45 for good contrast
- * @returns An HSL color string
- */
-export function stringToHSLColor(str: string, lightness = 45): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash) % 360;
-  const saturation = 65; // Good saturation for visibility
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}

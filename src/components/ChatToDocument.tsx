@@ -39,7 +39,7 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
       errorMessage="Failed to get answer. Please try again."
       emptyDocumentMessage="Document is empty. Add some content before asking questions."
       onSubmit={(content, modelName) => {
-        if (!question.trim()) return Promise.resolve();
+        if (!question.trim()) return Promise.reject(new Error("Question is required"));
         return generateAnswer(content, question, modelName);
       }}
     >

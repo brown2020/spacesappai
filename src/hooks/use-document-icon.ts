@@ -51,7 +51,7 @@ export function useDocumentIcon(documentId: string): UseDocumentIconReturn {
         if (!result.success) {
           // Revert optimistic update on failure
           setOptimisticIcon(undefined);
-          console.error("[useDocumentIcon] Failed to update icon:", result.error);
+          throw new Error(result.error.message);
         } else {
           // Clear optimistic state so Firestore data takes over
           // (small delay to let Firestore listener catch up)

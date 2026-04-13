@@ -99,5 +99,3 @@ export const COLLECTIONS = {
   USERS: "users",
   ROOMS: "rooms",
 } as const;
-
-export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
