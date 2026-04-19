@@ -113,8 +113,8 @@ function BlockNote({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, provider]); // Only depend on doc and provider - user info is accessed via props/refs
 
-  // Don't render if destroyed or no editor
-  if (isDestroyedRef.current || !editor) return null;
+  // Don't render if no editor (also handles destroyed state, as cleanup calls setEditor(null))
+  if (!editor) return null;
 
   return (
     <div className="relative max-w-6xl mx-auto">
