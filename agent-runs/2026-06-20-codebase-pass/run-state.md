@@ -11,21 +11,22 @@
 
 ## Current State
 
-- Phase: Stabilization Loop
-- Task: T-009
+- Phase: Integrator
+- Task: T-010
 - Status: Ready for checkpoint
-- Last command: git push --dry-run origin dev
-- Last result: passed; branch was already up to date before report edits
-- Last pushed commit: e05f75a001bc799badd8bfcea89eb062ee78c6de
+- Last command: validate_skill.py
+- Last result: passed; run folder returned ok
+- Last pushed commit: 7e6e1e53fe32e48b3dcf51e5bd44f0d0fa36ddb1
 - Branch sync: local dev matches origin/dev
-- Working tree: dirty with in-scope stabilization report updates
-- Next action: Commit and push stabilization checkpoint, then complete final integrator report
+- Working tree: dirty with in-scope final report updates
+- Next action: Commit and push final integrator checkpoint, then confirm branch sync
 
 ## Dirty File Classification
 
 | Path | Classification | Owner/Reason |
 | --- | --- | --- |
-| `agent-runs/2026-06-20-codebase-pass/07-stabilization-loop.md` | Safe-to-commit | Stabilization report |
+| `agent-runs/2026-06-20-codebase-pass/08-integrator.md` | Safe-to-commit | Integrator report |
+| `agent-runs/2026-06-20-codebase-pass/final-report.md` | Safe-to-commit | Final report |
 | `agent-runs/2026-06-20-codebase-pass/run-state.md` | Safe-to-commit | Required phase ledger update |
 | `agent-runs/2026-06-20-codebase-pass/task-queue.md` | Safe-to-commit | Required queue update |
 
