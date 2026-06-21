@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { useUserDocuments } from "@/hooks";
 import PageIcon from "./PageIcon";
-import { useDocumentData } from "react-firebase-hooks/firestore";
-import { doc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
 import {
   Dialog,
@@ -15,25 +14,23 @@ import {
 } from "@/components/ui/dialog";
 import type { RoomDocument } from "@/types";
 
+type SearchableDocument = RoomDocument & {
+  id: string;
+  title: string;
+  icon: string | null;
+};
+
 // ============================================================================
 // SEARCH RESULT ITEM
 // ============================================================================
 
 interface SearchResultProps {
-  roomDoc: RoomDocument;
+  roomDoc: SearchableDocument;
   isSelected: boolean;
   onClick: () => void;
 }
 
 function SearchResult({ roomDoc, isSelected, onClick }: SearchResultProps) {
-  const docRef = useMemo(
-    () => (roomDoc.id ? doc(db, COLLECTIONS.DOCUMENTS, roomDoc.id) : null),
-    [roomDoc.id]
-  );
-  const [data] = useDocumentData(docRef);
-  const title = data?.title || "Untitled";
-  const icon = data?.icon as string | null | undefined;
-
   return (
     <button
       type="button"
@@ -44,8 +41,8 @@ function SearchResult({ roomDoc, isSelected, onClick }: SearchResultProps) {
           : "hover:bg-muted"
       }`}
     >
-      <PageIcon icon={icon ?? null} size="sm" />
-      <span className="flex-1 truncate text-sm">{title}</span>
+      <PageIcon icon={roomDoc.icon} size="sm" />
+      <span className="flex-1 truncate text-sm">{roomDoc.title}</span>
       <span className="text-xs text-muted-foreground capitalize shrink-0">
         {roomDoc.role}
       </span>
@@ -67,21 +64,93 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
   const { documents } = useUserDocuments();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [metadataById, setMetadataById] = useState<
+    Record<string, { title: string; icon: string | null }>
+  >({});
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Combine all documents into a flat list
   const allDocs = useMemo(() => {
-    return [...documents.owner, ...documents.editor].filter(
+    return [...documents.owner, ...documents.editor, ...documents.viewer].filter(
       (d): d is RoomDocument & { id: string } => !!d.id
     );
   }, [documents]);
 
-  // Filter documents by search query — we can't filter by Firestore title
-  // client-side here since RoomDocument doesn't have the title. We show all
-  // docs and let the SearchResult components display titles. For actual filtering,
-  // we'd need to load all doc metadata. For now, show all when query is empty.
-  // This is fine because the list is bounded by the user's own documents.
-  const filteredDocs = allDocs;
+  const allDocIds = useMemo(() => allDocs.map((roomDoc) => roomDoc.id), [allDocs]);
+
+  useEffect(() => {
+    if (!open || allDocs.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function loadMetadata() {
+      setIsLoadingMetadata(true);
+      try {
+        const entries = await Promise.all(
+          allDocs.map(async (roomDoc) => {
+            const docRef = doc(db, COLLECTIONS.DOCUMENTS, roomDoc.id);
+            const snapshot = await getDoc(docRef);
+            const data = snapshot.data();
+            const rawTitle = data?.title;
+            const title =
+              typeof rawTitle === "string" && rawTitle.trim()
+                ? rawTitle
+                : "Untitled";
+            const rawIcon = data?.icon;
+            const icon = typeof rawIcon === "string" ? rawIcon : null;
+
+            return [roomDoc.id, { title, icon }] as const;
+          })
+        );
+
+        if (!isCancelled) {
+          setMetadataById(Object.fromEntries(entries));
+        }
+      } catch (error) {
+        console.error("[SearchDialog] Failed to load document metadata:", error);
+        if (!isCancelled) {
+          setMetadataById({});
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingMetadata(false);
+        }
+      }
+    }
+
+    loadMetadata();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [open, allDocs]);
+
+  const searchableDocs = useMemo<SearchableDocument[]>(() => {
+    return allDocs.map((roomDoc) => {
+      const metadata = metadataById[roomDoc.id];
+      return {
+        ...roomDoc,
+        title: metadata?.title ?? "Untitled",
+        icon: metadata?.icon ?? null,
+      };
+    });
+  }, [allDocs, metadataById]);
+
+  const filteredDocs = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return searchableDocs;
+
+    return searchableDocs.filter((roomDoc) => {
+      return (
+        roomDoc.title.toLowerCase().includes(normalizedQuery) ||
+        roomDoc.role.toLowerCase().includes(normalizedQuery) ||
+        roomDoc.id.toLowerCase().includes(normalizedQuery)
+      );
+    });
+  }, [query, searchableDocs]);
 
   // Navigate to selected document
   const handleSelect = useCallback(
@@ -99,7 +168,11 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, filteredDocs.length - 1));
+        setSelectedIndex((i) =>
+          filteredDocs.length === 0
+            ? 0
+            : Math.min(i + 1, filteredDocs.length - 1)
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
@@ -123,6 +196,12 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
+
+  useEffect(() => {
+    setSelectedIndex((index) =>
+      Math.min(index, Math.max(filteredDocs.length - 1, 0))
+    );
+  }, [filteredDocs.length]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,7 +232,9 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
         <div className="max-h-72 overflow-y-auto p-2">
           {filteredDocs.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              {allDocs.length === 0
+              {isLoadingMetadata
+                ? "Loading documents..."
+                : allDocIds.length === 0
                 ? "No documents yet. Create one to get started."
                 : "No documents found."}
             </p>
