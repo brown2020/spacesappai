@@ -80,7 +80,14 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
   const allDocIds = useMemo(() => allDocs.map((roomDoc) => roomDoc.id), [allDocs]);
 
   useEffect(() => {
-    if (!open || allDocs.length === 0) {
+    if (!open) {
+      setIsLoadingMetadata(false);
+      return;
+    }
+
+    if (allDocs.length === 0) {
+      setMetadataById({});
+      setIsLoadingMetadata(false);
       return;
     }
 
