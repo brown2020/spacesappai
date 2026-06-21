@@ -5,6 +5,26 @@
 
 ---
 
+## Current Implementation Snapshot (2026-06-20)
+
+This section records code evidence from the current `dev` branch for codebase-health work. It does not approve new roadmap priorities.
+
+Implemented in the current code:
+
+- Document search UI exists in `src/components/SearchDialog.tsx`, with `Cmd+K` / `Ctrl+K` wiring in `src/components/Header.tsx` and a sidebar trigger in `src/components/Sidebar.tsx`.
+- Viewer role support exists in `src/types/index.ts`, `src/hooks/use-owner.ts`, `src/components/Editor.tsx`, `src/app/api/auth-endpoint/route.ts`, and `firestore.rules`.
+- Public sharing exists through `src/components/ShareMenu.tsx`, `togglePublishDocument()` in `src/lib/documentActions.ts`, and the route `src/app/doc/[id]/public/page.tsx`.
+- Cover images exist through `src/components/DocumentCover.tsx`, `updateDocumentCover()` in `src/lib/documentActions.ts`, and `coverImage` validation in `firestore.rules`.
+- Page-level comments exist through `src/components/Comments.tsx`, `src/hooks/use-comments.ts`, comment server actions in `src/lib/documentActions.ts`, and comments rules in `firestore.rules`.
+- Title updates now go through the server action `updateDocumentTitle()` and `src/hooks/use-document-title.ts`.
+
+Current validation notes:
+
+- `package.json` exposes `npm run lint`, `npm run build`, `npm run dev`, and `npm run start`.
+- `SearchDialog` currently ignores typed search text and omits viewer-role documents from the searchable list; this is a codebase-improvement bug, not a product-roadmap decision.
+- Comments are implemented with a polling server-action hook, not a Firestore real-time subscription.
+- `README.md`, `CLAUDE.md`, and the roadmap sections below contain stale version and feature-status details and should be reconciled during documentation cleanup.
+
 ## 1. Table Stakes Gaps
 
 Things Notion has that we're missing and must add to be competitive.
