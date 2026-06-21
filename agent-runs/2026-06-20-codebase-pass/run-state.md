@@ -12,21 +12,22 @@
 ## Current State
 
 - Phase: Package and Dead-Code Cleanup
-- Task: T-006
+- Task: T-007
 - Status: Ready for checkpoint
 - Last command: npm run build
-- Last result: passed after non-forced npm audit fix
-- Last pushed commit: a77bf74d6e3b95cc45abeb29aad255cb1988940e
+- Last result: passed after dead-code removal
+- Last pushed commit: 6ec7f3b1a747acf621d43eb8aca01001f2dfe503
 - Branch sync: local dev matches origin/dev
-- Working tree: dirty with in-scope package cleanup lockfile and reports
-- Next action: Commit and push package cleanup, then remove proven dead components
+- Working tree: dirty with in-scope dead-code removals and reports
+- Next action: Commit and push dead-code cleanup, then begin review
 
 ## Dirty File Classification
 
 | Path | Classification | Owner/Reason |
 | --- | --- | --- |
-| `package-lock.json` | In-scope package cleanup | Non-forced npm audit fix |
-| `agent-runs/2026-06-20-codebase-pass/05-package-and-dead-code-cleanup.md` | Safe-to-commit | Package cleanup report |
+| `src/components/InviteUser.tsx` | In-scope dead-code removal | Source search found definitions only |
+| `src/components/ManageUsers.tsx` | In-scope dead-code removal | Source search found definitions only |
+| `agent-runs/2026-06-20-codebase-pass/05-package-and-dead-code-cleanup.md` | Safe-to-commit | Dead-code cleanup report |
 | `agent-runs/2026-06-20-codebase-pass/run-state.md` | Safe-to-commit | Required phase ledger update |
 | `agent-runs/2026-06-20-codebase-pass/task-queue.md` | Safe-to-commit | Required queue update |
 
