@@ -11,23 +11,23 @@
 
 ## Current State
 
-- Phase: Baseline Validation
-- Task: T-002
+- Phase: Findings Backlog
+- Task: T-003
 - Status: Ready for checkpoint
-- Last command: npm audit --audit-level=moderate
-- Last result: failed with 22 advisories; lint/build pass after npm ci
-- Last pushed commit: f8e21dade36dca19f6927a8d66a0ef4762bef705
+- Last command: npm run lint
+- Last result: passed after findings report update
+- Last pushed commit: 0ba9a52bcb8ca57a8ffe512db20c197ee82d741e
 - Branch sync: local dev matches origin/dev
-- Working tree: dirty with safe in-scope baseline reports
-- Next action: Commit and push baseline report, then build findings backlog
+- Working tree: dirty with safe in-scope findings reports
+- Next action: Commit and push findings backlog, then fix F-001
 
 ## Dirty File Classification
 
 | Path | Classification | Owner/Reason |
 | --- | --- | --- |
-| `agent-runs/2026-06-20-codebase-pass/02-baseline-validation.md` | Safe-to-commit | Baseline validation report |
+| `agent-runs/2026-06-20-codebase-pass/03-findings-backlog.md` | Safe-to-commit | Findings backlog report |
 | `agent-runs/2026-06-20-codebase-pass/run-state.md` | Safe-to-commit | Required phase ledger update |
-| `agent-runs/2026-06-20-codebase-pass/task-queue.md` | Safe-to-commit | Required task status update |
+| `agent-runs/2026-06-20-codebase-pass/task-queue.md` | Safe-to-commit | Required queue update |
 
 ## Blockers
 
