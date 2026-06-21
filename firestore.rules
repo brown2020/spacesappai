@@ -110,19 +110,30 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && isOwner(documentId);
 
       // Comments subcollection
-      // Note: writes and deletes go through Admin SDK (server actions) which bypasses rules.
-      // Client-side only needs read access. We require authentication and scope to the
-      // parent document path — you need the document ID to query comments.
+      // Server actions use the Admin SDK and bypass rules; these client rules are
+      // defense-in-depth and must still enforce parent document access.
       match /comments/{commentId} {
-        allow read: if isAuthenticated();
+        allow read: if isAuthenticated()
+          && canReadDocument(documentId);
         allow create: if isAuthenticated()
+          && canReadDocument(documentId)
           && request.resource.data.keys().hasAll(['authorId', 'authorName', 'content', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'content', 'createdAt'])
           && request.resource.data.authorId == getUserId()
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0
+          && request.resource.data.authorName.size() <= 200
+          && (!('authorAvatar' in request.resource.data.keys())
+            || request.resource.data.authorAvatar == null
+            || (request.resource.data.authorAvatar is string
+              && request.resource.data.authorAvatar.size() <= 2000))
           && request.resource.data.content is string
           && request.resource.data.content.size() > 0
-          && request.resource.data.content.size() <= 5000;
+          && request.resource.data.content.size() <= 5000
+          && request.resource.data.createdAt is timestamp;
         allow delete: if isAuthenticated()
-          && (resource.data.authorId == getUserId());
+          && canReadDocument(documentId)
+          && (resource.data.authorId == getUserId() || isOwner(documentId));
       }
     }
 
