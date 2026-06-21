@@ -11,23 +11,23 @@
 
 ## Current State
 
-- Phase: Preflight and Repo Docs
-- Task: T-001
+- Phase: Baseline Validation
+- Task: T-002
 - Status: Ready for checkpoint
-- Last command: npm run lint
-- Last result: passed
-- Last pushed commit: f64e29db62410b6258cb4e7010c8b76bd7573378
-- Branch sync: local dev matches origin/dev before report edits
-- Working tree: dirty with safe in-scope run reports/docs
-- Next action: Commit and push preflight docs, then run baseline validation
+- Last command: npm audit --audit-level=moderate
+- Last result: failed with 22 advisories; lint/build pass after npm ci
+- Last pushed commit: f8e21dade36dca19f6927a8d66a0ef4762bef705
+- Branch sync: local dev matches origin/dev
+- Working tree: dirty with safe in-scope baseline reports
+- Next action: Commit and push baseline report, then build findings backlog
 
 ## Dirty File Classification
 
 | Path | Classification | Owner/Reason |
 | --- | --- | --- |
-| `AGENTS.md` | Safe-to-commit | Repo guidance created by Preflight and Repo Docs |
-| `spec.md` | Safe-to-commit | Current implementation snapshot, no roadmap priority changes |
-| `agent-runs/2026-06-20-codebase-pass/*` | Safe-to-commit | Required sb-cbi run reports and resume ledger |
+| `agent-runs/2026-06-20-codebase-pass/02-baseline-validation.md` | Safe-to-commit | Baseline validation report |
+| `agent-runs/2026-06-20-codebase-pass/run-state.md` | Safe-to-commit | Required phase ledger update |
+| `agent-runs/2026-06-20-codebase-pass/task-queue.md` | Safe-to-commit | Required task status update |
 
 ## Blockers
 
