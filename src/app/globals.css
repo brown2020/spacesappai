@@ -117,7 +117,7 @@
     --chart-5: 27 87% 67%;
 
     /* Brand colors - purple theme */
-    --brand: 271 91% 65%;
+    --brand: 271 80% 42%;
     --brand-foreground: 0 0% 100%;
     --brand-muted: 270 95% 95%;
   }
@@ -149,7 +149,7 @@
     --chart-5: 340 75% 55%;
 
     /* Brand colors - purple theme (dark mode) */
-    --brand: 270 75% 60%;
+    --brand: 270 70% 55%;
     --brand-foreground: 0 0% 100%;
     --brand-muted: 270 30% 20%;
   }
