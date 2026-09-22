@@ -52,10 +52,9 @@ function BlockNote({
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onReadyRef = useLatest(onReady);
-  const userNameRef = useLatest(userName);
-  const userEmailRef = useLatest(userEmail);
 
-  // Create editor during render (memoized) to avoid cascading setState in effects
+  // Create editor during render (memoized) to avoid cascading setState in effects.
+  // User display fields are intentional deps so collaboration cursors stay accurate.
   const editor = useMemo(() => {
     return BlockNoteEditor.create({
       collaboration: {
@@ -64,15 +63,12 @@ function BlockNote({
         provider: provider,
         fragment: doc.getXmlFragment("document-store"),
         user: {
-          name: userName || userNameRef.current || "Anonymous",
-          color: stringToColor(
-            userEmail || userEmailRef.current || "anonymous"
-          ),
+          name: userName || "Anonymous",
+          color: stringToColor(userEmail || "anonymous"),
         },
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, provider]);
+  }, [doc, provider, userName, userEmail]);
 
   useEffect(() => {
     hasSignaledReadyRef.current = false;
