@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { FIRESTORE } from "@/constants";
@@ -90,7 +91,9 @@ async function deleteAllRoomEntries(roomId: string): Promise<void> {
     roomsQuery.docs.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
   }
-  console.warn(`[deleteAllRoomEntries] Hit max iterations (${MAX_ITERATIONS}) for room: ${roomId}`);
+  after(() => {
+    console.warn(`[deleteAllRoomEntries] Hit max iterations (${MAX_ITERATIONS}) for room: ${roomId}`);
+  });
 }
 
 /**
@@ -122,10 +125,12 @@ async function deleteLiveblocksRoomWithRetry(roomId: string): Promise<void> {
   }
 
   // Log after all retries exhausted
-  console.warn(
-    `[deleteDocument] Liveblocks room deletion failed after ${FIRESTORE.MAX_RETRIES} attempts:`,
-    lastError
-  );
+  after(() => {
+    console.warn(
+      `[deleteDocument] Liveblocks room deletion failed after ${FIRESTORE.MAX_RETRIES} attempts:`,
+      lastError
+    );
+  });
 }
 
 /**

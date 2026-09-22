@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getComments } from "@/lib/documentActions";
+import { getComments } from "@/server/documentActions";
 import type { Comment } from "@/types";
 
 interface UseCommentsReturn {

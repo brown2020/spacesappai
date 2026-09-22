@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { doc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
-import { updateDocumentCover } from "@/lib/documentActions";
+import { updateDocumentCover } from "@/server/documentActions";
 import { useOwner } from "@/hooks";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";

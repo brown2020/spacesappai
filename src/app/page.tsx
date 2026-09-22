@@ -15,7 +15,7 @@ interface FeatureCardProps {
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="flex items-start gap-4 p-6 rounded-xl bg-card border border-border hover:border-brand/30 hover:shadow-sm transition-all">
+    <div className="flex items-start gap-4 p-6 rounded-xl bg-card border border-border hover:border-brand/30 hover:shadow-sm transition-colors transition-shadow">
       <div className="shrink-0 p-3 bg-brand-muted text-brand rounded-lg">
         {icon}
       </div>

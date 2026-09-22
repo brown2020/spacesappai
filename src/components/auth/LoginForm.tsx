@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordField } from "./PasswordField";
 import { useAuth } from "@/providers/authContext";
 import { AuthDivider } from "./AuthDivider";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -85,9 +86,8 @@ export function LoginForm() {
               Forgot password?
             </Link>
           </div>
-          <Input
+          <PasswordField
             id="login-password"
-            type="password"
             name="password"
             autoComplete="current-password"
             required

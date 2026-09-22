@@ -10,7 +10,7 @@ import {
   removeUserFromDocument,
   updateUserRole,
   togglePublishDocument,
-} from "@/lib/documentActions";
+} from "@/server/documentActions";
 import { isValidEmail, normalizeEmail, cn } from "@/lib/utils";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { doc } from "firebase/firestore";

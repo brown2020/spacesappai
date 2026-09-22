@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { createNewDocument } from "@/lib/documentActions";
+import { createNewDocument } from "@/server/documentActions";
 import { Button, type ButtonProps } from "./ui/button";
 
 type NewDocumentButtonProps = Omit<ButtonProps, "onClick" | "disabled">;

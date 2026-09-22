@@ -45,6 +45,25 @@ describe("dedicated auth pages", () => {
     assert.match(src, /mapFirebaseAuthError|dispatchMappedError/);
   });
 
+  
+  it("login and signup password fields have accessible show/hide (eye)", () => {
+    for (const file of ["LoginForm.tsx", "SignupForm.tsx"]) {
+      const src = readFileSync(
+        join(root, `src/components/auth/${file}`),
+        "utf8"
+      );
+      assert.match(src, /PasswordField/);
+    }
+    const field = readFileSync(
+      join(root, "src/components/auth/PasswordField.tsx"),
+      "utf8"
+    );
+    assert.match(field, /Show password/);
+    assert.match(field, /Hide password/);
+    assert.match(field, /EyeOff|Eye/);
+    assert.match(field, /aria-pressed/);
+  });
+
   it("forgot-password form uses sendPasswordReset and returns to login", () => {
     const src = readFileSync(
       join(root, "src/components/auth/ForgotPasswordForm.tsx"),

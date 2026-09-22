@@ -5,7 +5,7 @@ import { MessageSquare, Trash2, X, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useRoom } from "@liveblocks/react/suspense";
 import { useComments, useOwner } from "@/hooks";
-import { addComment, deleteComment } from "@/lib/documentActions";
+import { addComment, deleteComment } from "@/server/documentActions";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -31,7 +31,7 @@ function formatRelativeTime(date: Date | string): string {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return d.toLocaleDateString();
+  return d.toLocaleDateString("en-US", { timeZone: "UTC" });
 }
 
 // ============================================================================
@@ -134,7 +134,11 @@ function CommentInput({ roomId, onAdded }: CommentInputProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 p-3 border-t">
+      <label htmlFor="comment-input" className="sr-only">
+        Write a comment
+      </label>
       <input
+        id="comment-input"
         type="text"
         value={content}
         onChange={(e) => setContent(e.target.value)}

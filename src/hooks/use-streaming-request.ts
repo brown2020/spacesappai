@@ -159,13 +159,7 @@ export function useStreamingRequest(
           toast.error(errorMessage);
         }
       } finally {
-        if (
-          isMountedRef.current &&
-          requestId === currentRequestIdRef.current &&
-          !abortController.signal.aborted
-        ) {
-          setIsPending(false);
-        }
+        setIsPending(false);
       }
     },
     [successMessage, errorMessage, isMountedRef]

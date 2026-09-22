@@ -215,8 +215,12 @@ function SearchDialogContent({ onOpenChange }: SearchDialogContentProps) {
       <DialogTitle className="sr-only">Search documents</DialogTitle>
 
       <div className="flex items-center gap-3 px-4 py-3 border-b">
-        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <Search className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+        <label htmlFor="search-documents" className="sr-only">
+          Search documents
+        </label>
         <input
+          id="search-documents"
           ref={inputRef}
           type="text"
           value={query}

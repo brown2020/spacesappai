@@ -3,19 +3,10 @@
 import { useEffect, useRef } from "react";
 import { onIdTokenChanged } from "firebase/auth";
 import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
-
-async function setServerSessionFromIdToken(idToken: string): Promise<void> {
-  const res = await fetch("/api/auth/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!res.ok) throw new Error("Failed to create session");
-}
-
-async function clearServerSession(): Promise<void> {
-  await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
-}
+import {
+  clearServerSession,
+  setServerSessionFromIdToken,
+} from "@/lib/sessionCookieClient";
 
 export default function FirebaseAuthBridge() {
   const isInFlightRef = useRef(false);

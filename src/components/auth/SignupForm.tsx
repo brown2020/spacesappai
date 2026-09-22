@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordField } from "./PasswordField";
 import { useAuth } from "@/providers/authContext";
 import { AuthDivider } from "./AuthDivider";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -92,9 +93,8 @@ export function SignupForm() {
           >
             Password
           </label>
-          <Input
+          <PasswordField
             id="signup-password"
-            type="password"
             name="password"
             autoComplete="new-password"
             required
@@ -113,9 +113,8 @@ export function SignupForm() {
           >
             Confirm password
           </label>
-          <Input
+          <PasswordField
             id="signup-confirm-password"
-            type="password"
             name="confirmPassword"
             autoComplete="new-password"
             required

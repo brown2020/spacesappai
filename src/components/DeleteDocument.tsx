@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useRoomId } from "@/hooks";
-import { deleteDocument } from "@/lib/documentActions";
+import { deleteDocument } from "@/server/documentActions";
 import { Button } from "./ui/button";
 import {
   Dialog,

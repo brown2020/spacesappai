@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { doc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
-import { updateDocumentIcon } from "@/lib/documentActions";
+import { updateDocumentIcon } from "@/server/documentActions";
 
 interface UseDocumentIconReturn {
   icon: string | null;

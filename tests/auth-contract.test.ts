@@ -8,7 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("auth and mutation contracts", () => {
   it("document actions require authenticated user before writes", () => {
-    const src = readFileSync(join(root, "src/lib/documentActions.ts"), "utf8");
+    const src = readFileSync(join(root, "src/server/documentActions.ts"), "utf8");
     assert.match(src, /requireAuthenticatedUser/);
     assert.match(src, /verifyOwnership|FORBIDDEN|UNAUTHORIZED/);
     assert.match(src, /"use server"/);
