@@ -1,4 +1,5 @@
 import RoomProvider from "@/components/RoomProvider";
+import LiveBlocksProvider from "@/components/LiveBlocksProvider";
 import { requireAuthenticatedUserOrRedirect } from "@/lib/firebase-session";
 import { ensureRoomHasOwner } from "@/lib/room-ownership";
 
@@ -29,5 +30,9 @@ export default async function DocumentLayout({
   const { id } = await params;
   await prepareDocumentRoom(id);
 
-  return <RoomProvider roomId={id}>{children}</RoomProvider>;
+  return (
+    <LiveBlocksProvider>
+      <RoomProvider roomId={id}>{children}</RoomProvider>
+    </LiveBlocksProvider>
+  );
 }

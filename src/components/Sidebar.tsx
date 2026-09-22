@@ -44,7 +44,7 @@ function EmptyState() {
       <div className="mb-3 inline-flex p-3 rounded-full bg-muted">
         <FileText className="w-6 h-6 text-muted-foreground" />
       </div>
-      <p className="text-muted-foreground text-sm mb-4">
+      <p className="text-foreground/70 text-sm mb-4">
         No documents yet
       </p>
       <NewDocumentButton variant="outline" size="sm" />
@@ -72,7 +72,7 @@ function SidebarMenuContent() {
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search</span>
-        <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] bg-muted rounded border font-mono">
+        <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-xs text-foreground/70 bg-muted rounded border font-mono">
           ⌘K
         </kbd>
       </Button>
