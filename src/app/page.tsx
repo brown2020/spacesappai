@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FileText, Users, Sparkles, Zap, Globe, Shield } from "lucide-react";
+import HomeAuthCta from "@/components/HomeAuthCta";
 import NewDocumentButton from "@/components/NewDocumentButton";
 
 // ============================================================================
@@ -58,13 +59,7 @@ export default function HomePage() {
             Write, edit, and brainstorm together with AI-powered features. Built
             for teams who value simplicity and speed.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <NewDocumentButton
-              variant="default"
-              size="lg"
-              className="text-base px-8"
-            />
-          </div>
+          <HomeAuthCta />
         </div>
       </section>
 

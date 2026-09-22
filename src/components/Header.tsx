@@ -5,11 +5,7 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs";
 import SearchDialog from "./SearchDialog";
-import { toast } from "sonner";
-import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { deleteCookie } from "cookies-next";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth as firebaseAuth } from "@/firebase/firebaseConfig";
+import { useAuth } from "@/providers/authContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -68,70 +64,70 @@ function ThemeToggle() {
 // USER ACTIONS
 // ============================================================================
 
-interface UserActionsProps {
-  user: ReturnType<typeof useAuthState>[0];
-  isLoading: boolean;
-}
+function UserActions() {
+  const {
+    user,
+    isLoading,
+    signInWithGoogle,
+    logout,
+    authError,
+    clearAuthError,
+  } = useAuth();
 
-function UserActions({ user, isLoading }: UserActionsProps) {
-
-  const handleSignIn = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(firebaseAuth, provider);
-
-      const redirectTo =
-        new URLSearchParams(window.location.search).get("redirect") ?? "";
-      // Only allow relative redirects to prevent open redirect attacks
-      if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
-        window.location.assign(redirectTo);
-      }
-    } catch (err) {
-      console.error("[Header] signIn error:", err);
-      toast.error("Sign in failed. Please try again.");
+  const handleAuth = useCallback(async () => {
+    clearAuthError();
+    if (user) {
+      await logout();
+      return;
     }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      // 1. Delete the server-managed httpOnly session cookie
-      await fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
-
-      // 2. Explicitly delete any client-readable auth cookies
-      deleteCookie("__session", { path: "/" });
-      deleteCookie("authToken", { path: "/" });
-
-      // 3. Sign out from Firebase
-      await signOut(firebaseAuth);
-    } catch (err) {
-      console.error("[Header] signOut error:", err);
-      toast.error("Sign out failed. Please try again.");
-    }
-  };
+    await signInWithGoogle();
+  }, [clearAuthError, logout, signInWithGoogle, user]);
 
   return (
     <div className="flex items-center gap-2">
       <ThemeToggle />
       {!user ? (
-        <button
-          type="button"
-          disabled={isLoading}
-          onClick={handleSignIn}
-          className="px-4 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          Sign In
-        </button>
+        <>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={handleAuth}
+            className="px-4 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Sign In
+          </button>
+          {authError ? (
+            <p
+              role="alert"
+              className="hidden sm:block text-xs text-rose-200 max-w-[200px] text-right"
+            >
+              {authError}{" "}
+              <button
+                type="button"
+                className="underline underline-offset-2"
+                onClick={clearAuthError}
+              >
+                Dismiss
+              </button>
+            </p>
+          ) : null}
+        </>
       ) : (
         <>
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.photoURL ?? ""} alt={user.displayName ?? ""} />
+            <AvatarImage
+              src={user.photoURL ?? ""}
+              alt={user.displayName ?? ""}
+            />
             <AvatarFallback className="text-xs">
-              {(user.displayName ?? user.email ?? "U").slice(0, 1).toUpperCase()}
+              {(user.displayName ?? user.email ?? "U")
+                .slice(0, 1)
+                .toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={handleAuth}
             className="px-3 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
           >
             Sign Out
@@ -147,7 +143,7 @@ function UserActions({ user, isLoading }: UserActionsProps) {
 // ============================================================================
 
 export default function Header() {
-  const [user, isLoading] = useAuthState(firebaseAuth);
+  const { user } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Global Cmd+K / Ctrl+K shortcut to open search
@@ -168,7 +164,7 @@ export default function Header() {
       <header className="sticky top-0 z-50 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-brand to-brand/80 text-brand-foreground shadow-lg">
         <HeaderLogo userName={user?.displayName || undefined} />
         <HeaderNav />
-        <UserActions user={user} isLoading={isLoading} />
+        <UserActions />
       </header>
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
