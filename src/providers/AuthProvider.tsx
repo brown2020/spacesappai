@@ -118,6 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (redirectPath) {
       // Full navigation after auth — avoids useEffect client redirects.
       window.location.assign(redirectPath);
+      return;
+    }
+    // Leave dedicated auth pages after a successful sign-in / sign-up.
+    const path = window.location.pathname;
+    if (
+      path === "/login" ||
+      path === "/signup" ||
+      path === "/forgot-password"
+    ) {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard nav after session cookie sync
+      window.location.assign("/");
     }
   }, []);
 

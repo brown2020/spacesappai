@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs";
@@ -21,9 +22,11 @@ function HeaderLogo({ userName }: HeaderLogoProps) {
   const displayName = userName ? `${userName}'s Space` : "Spaces";
 
   return (
-    <h1 className="text-lg sm:text-2xl font-semibold tracking-tight">
-      {displayName}
-    </h1>
+    <Link href="/" className="hover:opacity-90 transition-opacity">
+      <h1 className="text-lg sm:text-2xl font-semibold tracking-tight">
+        {displayName}
+      </h1>
+    </Link>
   );
 }
 
@@ -65,37 +68,31 @@ function ThemeToggle() {
 // ============================================================================
 
 function UserActions() {
-  const {
-    user,
-    isLoading,
-    signInWithGoogle,
-    logout,
-    authError,
-    clearAuthError,
-  } = useAuth();
+  const { user, isLoading, logout, authError, clearAuthError } = useAuth();
 
-  const handleAuth = useCallback(async () => {
+  const handleSignOut = useCallback(async () => {
     clearAuthError();
-    if (user) {
-      await logout();
-      return;
-    }
-    await signInWithGoogle();
-  }, [clearAuthError, logout, signInWithGoogle, user]);
+    await logout();
+  }, [clearAuthError, logout]);
 
   return (
     <div className="flex items-center gap-2">
       <ThemeToggle />
       {!user ? (
         <>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={handleAuth}
-            className="px-4 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          <Link
+            href="/login"
+            className="px-4 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors aria-disabled:opacity-60"
+            aria-disabled={isLoading || undefined}
           >
-            Sign In
-          </button>
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            className="px-4 py-2 text-sm font-medium bg-white text-brand hover:bg-white/90 rounded-lg transition-colors"
+          >
+            Create account
+          </Link>
           {authError ? (
             <p
               role="alert"
@@ -127,7 +124,7 @@ function UserActions() {
           </Avatar>
           <button
             type="button"
-            onClick={handleAuth}
+            onClick={handleSignOut}
             className="px-3 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
           >
             Sign Out
