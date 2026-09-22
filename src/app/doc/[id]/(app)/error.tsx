@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 // ============================================================================
@@ -21,6 +22,7 @@ interface ErrorProps {
  * Catches errors during document loading/rendering
  */
 export default function Error({ error, reset }: ErrorProps) {
+  const router = useRouter();
   useEffect(() => {
     // Log the error to an error reporting service
     console.error("[Document Error]", error);
@@ -65,7 +67,7 @@ export default function Error({ error, reset }: ErrorProps) {
             Try Again
           </Button>
           <Button
-            onClick={() => (window.location.href = "/")}
+            onClick={() => router.push("/")}
             variant="outline"
           >
             Go Home
