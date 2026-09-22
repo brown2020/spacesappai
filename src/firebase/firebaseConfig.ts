@@ -82,11 +82,6 @@ export const db: Firestore = getClientFirestore(app);
  */
 export const auth: Auth = getAuth(app);
 
-/**
- * Firebase app instance
- */
-export { app };
-
 // ============================================================================
 // COLLECTION REFERENCES
 // ============================================================================

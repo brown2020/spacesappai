@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { useRoom, useSelf } from "@liveblocks/react/suspense";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
@@ -47,29 +47,17 @@ function BlockNote({
   userName,
   userEmail,
 }: BlockNoteProps) {
-  const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const hasSignaledReadyRef = useRef(false);
-  // Track if provider is being destroyed to prevent editor operations
   const isDestroyedRef = useRef(false);
-  // Track timeout for cleanup to prevent memory leaks
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Use useLatest to keep refs updated without causing re-renders or effect re-runs
   const onReadyRef = useLatest(onReady);
   const userNameRef = useLatest(userName);
   const userEmailRef = useLatest(userEmail);
 
-  // Create editor only when doc/provider change (not on user info changes)
-  // Note: We include userName and userEmail to ensure editor has latest values
-  // when created, but we use refs to avoid recreating on every user info change
-  useEffect(() => {
-    // Reset flags when doc/provider change
-    hasSignaledReadyRef.current = false;
-    isDestroyedRef.current = false;
-
-    // Create editor instance with current user info
-    // Using props directly on first render, refs on subsequent
-    const createdEditor = BlockNoteEditor.create({
+  // Create editor during render (memoized) to avoid cascading setState in effects
+  const editor = useMemo(() => {
+    return BlockNoteEditor.create({
       collaboration: {
         // @ts-expect-error BlockNote expects y-protocols/awareness Awareness type,
         // but Liveblocks bundles a compatible but structurally different Awareness type.
@@ -83,15 +71,16 @@ function BlockNote({
         },
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, provider]);
 
-    setEditor(createdEditor);
+  useEffect(() => {
+    hasSignaledReadyRef.current = false;
+    isDestroyedRef.current = false;
 
-    // Signal readiness once after creating the editor
     if (!hasSignaledReadyRef.current && onReadyRef.current) {
       hasSignaledReadyRef.current = true;
-      // Use setTimeout to avoid calling during render
       readyTimeoutRef.current = setTimeout(() => {
-        // Only signal if not destroyed
         if (!isDestroyedRef.current) {
           onReadyRef.current?.();
         }
@@ -99,21 +88,15 @@ function BlockNote({
       }, 0);
     }
 
-    // Cleanup: mark as destroyed, clear timeout, and clear editor reference
     return () => {
       isDestroyedRef.current = true;
       if (readyTimeoutRef.current) {
         clearTimeout(readyTimeoutRef.current);
         readyTimeoutRef.current = null;
       }
-      setEditor(null);
-      // Note: BlockNoteEditor doesn't have a destroy method
-      // The collaboration provider cleanup is handled in parent
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, provider]); // Only depend on doc and provider - user info is accessed via props/refs
+  }, [editor, onReadyRef]);
 
-  // Don't render if no editor (also handles destroyed state, as cleanup calls setEditor(null))
   if (!editor) return null;
 
   return (
@@ -179,41 +162,67 @@ export default function Editor({ onReady }: EditorProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const darkMode = resolvedTheme === "dark";
 
-  const [doc, setDoc] = useState<Y.Doc | null>(null);
-  const [provider, setProvider] = useState<LiveblocksYjsProvider | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
-  // Stable callback reference
   const handleToggleDarkMode = useCallback(() => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }, [resolvedTheme, setTheme]);
 
-  // Initialize Yjs document and Liveblocks provider
-  useEffect(() => {
-    if (!room) return;
-
-    const yDoc = new Y.Doc();
-    const yProvider = new LiveblocksYjsProvider(room, yDoc);
-
-    setDoc(yDoc);
-    setProvider(yProvider);
-
-    return () => {
-      // Proper cleanup order: provider first, then doc
-      yProvider.destroy();
-      yDoc.destroy();
-    };
-  }, [room]);
-
-  // Track client-side mount for hydration
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Don't render until mounted and initialized
-  if (!doc || !provider || !isMounted) {
+  if (!isMounted || !room) {
     return null;
   }
+
+  return (
+    <EditorSession
+      key={room.id}
+      room={room}
+      canEdit={canEdit}
+      darkMode={darkMode}
+      onToggleDarkMode={handleToggleDarkMode}
+      onReady={onReady}
+      userName={userInfo?.name}
+      userEmail={userInfo?.email}
+    />
+  );
+}
+
+interface EditorSessionProps {
+  room: NonNullable<ReturnType<typeof useRoom>>;
+  canEdit: boolean;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
+  onReady?: () => void;
+  userName?: string;
+  userEmail?: string;
+}
+
+function EditorSession({
+  room,
+  canEdit,
+  darkMode,
+  onToggleDarkMode,
+  onReady,
+  userName,
+  userEmail,
+}: EditorSessionProps) {
+  const [collab] = useState(() => {
+    const yDoc = new Y.Doc();
+    const yProvider = new LiveblocksYjsProvider(room, yDoc);
+    return { doc: yDoc, provider: yProvider };
+  });
+
+  useEffect(() => {
+    return () => {
+      collab.provider.destroy();
+      collab.doc.destroy();
+    };
+  }, [collab]);
+
+  const { doc, provider } = collab;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -221,7 +230,7 @@ export default function Editor({ onReady }: EditorProps) {
         <EditorToolbar
           doc={doc}
           darkMode={darkMode}
-          onToggleDarkMode={handleToggleDarkMode}
+          onToggleDarkMode={onToggleDarkMode}
         />
       )}
 
@@ -231,8 +240,8 @@ export default function Editor({ onReady }: EditorProps) {
         darkMode={darkMode}
         editable={canEdit}
         onReady={onReady}
-        userName={userInfo?.name}
-        userEmail={userInfo?.email}
+        userName={userName}
+        userEmail={userEmail}
       />
     </div>
   );

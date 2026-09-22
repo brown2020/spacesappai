@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useTransition } from "react";
+import Image from "next/image";
 import { ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { doc } from "firebase/firestore";
@@ -53,7 +54,6 @@ function CoverUrlInput({ onSubmit, isPending }: CoverUrlInputProps) {
         onChange={(e) => setUrl(e.target.value)}
         disabled={isPending}
         className="h-8 text-sm"
-        autoFocus
       />
       <Button type="submit" size="sm" disabled={!url.trim() || isPending} className="h-8">
         {isPending ? "..." : "Set"}
@@ -150,10 +150,13 @@ export default function DocumentCover({ documentId }: DocumentCoverProps) {
   return (
     <div className="relative group max-w-6xl mx-auto mb-4">
       <div className="h-48 rounded-lg overflow-hidden bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={coverImage}
           alt="Document cover"
+          width={1200}
+          height={192}
+          unoptimized
+          loader={({ src }) => src}
           className="w-full h-full object-cover"
         />
       </div>

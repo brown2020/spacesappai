@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import stringToColor from "@/lib/stringToColor";
 
 // ============================================================================
@@ -45,19 +45,20 @@ function CursorIcon({ color }: CursorIconProps) {
 interface NameTagProps {
   name: string;
   color: string;
+  reduceMotion: boolean | null;
 }
 
-function NameTag({ name, color }: NameTagProps) {
+function NameTag({ name, color, reduceMotion }: NameTagProps) {
   return (
-    <motion.div
+    <m.div
       style={{ backgroundColor: color }}
-      initial={{ scale: 0.5, opacity: 0 }}
+      initial={reduceMotion ? false : { scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.5, opacity: 0 }}
+      exit={reduceMotion ? undefined : { scale: 0.95, opacity: 0 }}
       className="px-2 py-1 text-white text-xs font-medium rounded-full whitespace-nowrap shadow-lg"
     >
       {name}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -72,17 +73,20 @@ export default function FollowPointer({
 }: FollowPointerProps) {
   const color = stringToColor(email);
   const displayName = name || email;
+  const reduceMotion = useReducedMotion();
 
   return (
-    <motion.div
-      className="absolute z-50 pointer-events-none"
-      style={{ top: y, left: x }}
-      initial={{ scale: 1, opacity: 1 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0, opacity: 0 }}
-    >
-      <CursorIcon color={color} />
-      <NameTag name={displayName} color={color} />
-    </motion.div>
+    <LazyMotion features={domAnimation} strict>
+      <m.div
+        className="absolute z-50 pointer-events-none"
+        style={{ top: y, left: x }}
+        initial={reduceMotion ? false : { scale: 0.95, opacity: 1 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={reduceMotion ? undefined : { scale: 0.95, opacity: 0 }}
+      >
+        <CursorIcon color={color} />
+        <NameTag name={displayName} color={color} reduceMotion={reduceMotion} />
+      </m.div>
+    </LazyMotion>
   );
 }

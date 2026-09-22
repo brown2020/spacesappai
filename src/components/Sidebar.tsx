@@ -23,11 +23,11 @@ import {
 function LoadingSkeleton() {
   return (
     <div className="space-y-2">
-      {[1, 2, 3].map((i) => (
+      {["skel-a", "skel-b", "skel-c"].map((id, i) => (
         <div
-          key={i}
+          key={id}
           className="h-9 bg-muted animate-pulse rounded-md"
-          style={{ animationDelay: `${i * 100}ms` }}
+          style={{ animationDelay: `${(i + 1) * 100}ms` }}
         />
       ))}
     </div>

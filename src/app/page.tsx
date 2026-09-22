@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { FileText, Users, Sparkles, Zap, Globe, Shield } from "lucide-react";
 import NewDocumentButton from "@/components/NewDocumentButton";
 
@@ -26,6 +27,16 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
     </div>
   );
 }
+
+// ============================================================================
+// METADATA
+// ============================================================================
+
+export const metadata: Metadata = {
+  title: "Collaborate on Documents in Real-Time",
+  description:
+    "Write, edit, and brainstorm together with AI-powered features. Built for teams who value simplicity and speed.",
+};
 
 // ============================================================================
 // HOME PAGE

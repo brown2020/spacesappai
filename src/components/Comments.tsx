@@ -202,8 +202,8 @@ export default function CommentsPanel({ isOpen, onClose }: CommentsPanelProps) {
           </div>
         ) : isLoading ? (
           <div className="space-y-3 py-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex gap-3">
+            {["c-a", "c-b", "c-c"].map((id) => (
+              <div key={id} className="flex gap-3">
                 <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3 w-24 bg-muted animate-pulse rounded" />

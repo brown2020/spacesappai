@@ -167,9 +167,9 @@ export default function EmojiPicker({
             {(activeCategory === "recent"
               ? recentEmojis
               : EMOJI_CATEGORIES[activeCategory].emojis
-            ).map((emoji, index) => (
+            ).map((emoji) => (
               <button
-                key={`${emoji}-${index}`}
+                key={emoji}
                 type="button"
                 onClick={() => handleSelect(emoji)}
                 className={cn(

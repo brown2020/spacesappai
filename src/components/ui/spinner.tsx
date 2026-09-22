@@ -19,7 +19,7 @@ interface SpinnerProps {
  * A simple CSS-based loading spinner
  * Replaces react-spinners for lighter bundle size
  */
-export function Spinner({ size = 40, className }: SpinnerProps) {
+function Spinner({ size = 40, className }: SpinnerProps) {
   return (
     <div
       className={cn(

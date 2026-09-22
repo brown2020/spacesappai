@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 // ============================================================================
 // TYPES
@@ -13,33 +13,35 @@ interface ClientOnlyProps {
   fallback?: ReactNode;
 }
 
+function subscribe() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 /**
- * Wrapper component that only renders children on the client side
- * Useful for preventing hydration mismatches with components that:
- * - Generate different IDs on server vs client (Radix UI)
- * - Depend on browser APIs
- * - Use random values
- *
- * @example
- * ```tsx
- * <ClientOnly fallback={<Skeleton />}>
- *   <ComponentWithHydrationIssues />
- * </ClientOnly>
- * ```
+ * Wrapper component that only renders children on the client side.
+ * Uses useSyncExternalStore to avoid hydration flicker from mount effects.
  */
 export default function ClientOnly({
   children,
   fallback = null,
 }: ClientOnlyProps) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    subscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  );
 
   if (!isMounted) {
     return <>{fallback}</>;
@@ -47,4 +49,3 @@ export default function ClientOnly({
 
   return <>{children}</>;
 }
-

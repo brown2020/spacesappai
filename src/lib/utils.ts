@@ -38,7 +38,7 @@ export function isValidEmail(email: string): boolean {
  * @param id - The ID to validate
  * @returns true if the ID is valid
  */
-export function isValidDocumentId(id: string): boolean {
+function isValidDocumentId(id: string): boolean {
   if (!id || typeof id !== "string") return false;
   if (id.length === 0 || id.length > 500) return false;
   if (id === "." || id === "..") return false;

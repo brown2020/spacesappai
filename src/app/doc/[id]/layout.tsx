@@ -11,6 +11,13 @@ interface DocumentLayoutProps {
   params: Promise<{ id: string }>;
 }
 
+async function prepareDocumentRoom(id: string) {
+  const user = await requireAuthenticatedUserOrRedirect(
+    `/?redirect=${encodeURIComponent(`/doc/${id}`)}`
+  );
+  await ensureRoomHasOwner(id, user);
+}
+
 // ============================================================================
 // DOCUMENT LAYOUT
 // ============================================================================
@@ -19,16 +26,8 @@ export default async function DocumentLayout({
   children,
   params,
 }: DocumentLayoutProps) {
-  // Resolve async params (Next.js 16 pattern)
   const { id } = await params;
-
-  // Protect this route - requires authentication (server session cookie)
-  const user = await requireAuthenticatedUserOrRedirect(`/?redirect=${encodeURIComponent(`/doc/${id}`)}`);
-
-  // Self-heal: if a room somehow lost its last owner, restore ownership for the
-  // current user (only if they already have a room entry).
-  // Pass verified user to avoid a redundant session cookie verification.
-  await ensureRoomHasOwner(id, user);
+  await prepareDocumentRoom(id);
 
   return <RoomProvider roomId={id}>{children}</RoomProvider>;
 }

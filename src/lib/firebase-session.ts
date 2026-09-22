@@ -10,7 +10,7 @@ export function isUnauthorizedError(error: unknown): boolean {
   return error instanceof Error && error.message === UNAUTHORIZED_ERROR_MESSAGE;
 }
 
-export interface AuthenticatedUser {
+interface AuthenticatedUser {
   uid: string;
   email: string | null;
   name: string | null;

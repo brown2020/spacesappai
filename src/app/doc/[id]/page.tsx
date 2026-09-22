@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import Document from "@/components/Document";
+import { adminDb } from "@/firebase/firebaseAdmin";
+import { COLLECTIONS } from "@/firebase/firebaseConfig";
 
 // ============================================================================
 // TYPES
@@ -6,6 +9,26 @@ import Document from "@/components/Document";
 
 interface DocumentPageProps {
   params: Promise<{ id: string }>;
+}
+
+// ============================================================================
+// METADATA
+// ============================================================================
+
+export async function generateMetadata({
+  params,
+}: DocumentPageProps): Promise<Metadata> {
+  const { id } = await params;
+  if (!id || id.length > 128 || /[/]/.test(id)) {
+    return { title: "Document" };
+  }
+  try {
+    const snap = await adminDb.collection(COLLECTIONS.DOCUMENTS).doc(id).get();
+    const title = (snap.data()?.title as string) || "Untitled";
+    return { title };
+  } catch {
+    return { title: "Document" };
+  }
 }
 
 // ============================================================================

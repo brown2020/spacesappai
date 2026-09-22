@@ -77,7 +77,7 @@ function DefaultFallback({ error, onRetry }: DefaultFallbackProps) {
  * </ErrorBoundary>
  * ```
  */
-export class ErrorBoundary extends Component<
+class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
@@ -201,5 +201,4 @@ export function DocumentErrorBoundary({ children }: { children: ReactNode }) {
   );
 }
 
-export default ErrorBoundary;
 

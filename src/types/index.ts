@@ -119,11 +119,4 @@ export interface ChildrenProps {
   children: React.ReactNode;
 }
 
-/**
- * Props for document-aware components
- */
-export interface DocumentProps {
-  id: string;
-}
-
 
