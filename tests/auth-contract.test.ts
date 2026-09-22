@@ -33,7 +33,8 @@ describe("auth and mutation contracts", () => {
   });
 
   it("document layout enforces auth before RoomProvider", () => {
-    const src = readFileSync(join(root, "src/app/doc/[id]/layout.tsx"), "utf8");
+    const src = readFileSync(join(root, "src/app/doc/[id]/(app)/layout.tsx"), "utf8");
     assert.match(src, /requireAuthenticatedUserOrRedirect/);
+    assert.match(src, /RoomProvider/);
   });
 });

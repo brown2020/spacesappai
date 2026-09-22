@@ -24,7 +24,7 @@ function createLiveblocksClient(): Liveblocks {
 
 let client: Liveblocks | null = null;
 
-export function getLiveblocks(): Liveblocks {
+function getLiveblocks(): Liveblocks {
   if (!client) {
     client = createLiveblocksClient();
   }
