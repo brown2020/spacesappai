@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder so Liveblocks client can construct during `next build` page collection.
+      # Not a real secret; route handlers that call Liveblocks will fail without a real key.
+      LIVEBLOCKS_PRIVATE_KEY: "REDACTED_BY_HISTORY_PURGE"
+      NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY: "REDACTED_BY_HISTORY_PURGE"
+      NEXT_PUBLIC_FIREBASE_APIKEY: "REDACTED_BY_HISTORY_PURGE"
+      NEXT_PUBLIC_FIREBASE_AUTHDOMAIN: "notionignite.firebaseapp.com"
+      NEXT_PUBLIC_FIREBASE_PROJECTID: "notionignite"
+      NEXT_PUBLIC_FIREBASE_STORAGEBUCKET: "notionignite.appspot.com"
+      NEXT_PUBLIC_FIREBASE_MESSAGINGSENDERID: "435913668329"
+      NEXT_PUBLIC_FIREBASE_APPID: "1:435913668329:web:77be263273318be8a2a278"
+      NEXT_PUBLIC_FIREBASE_MEASUREMENTID: "G-1LJVCLFT9N"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
