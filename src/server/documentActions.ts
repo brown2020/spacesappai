@@ -33,6 +33,7 @@ export async function createNewDocument(): Promise<
 
       transaction.set(docRef, {
         title: "New Doc",
+        ownerId: user.uid,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

@@ -10,9 +10,10 @@ export function isUnauthorizedError(error: unknown): boolean {
   return error instanceof Error && error.message === UNAUTHORIZED_ERROR_MESSAGE;
 }
 
-interface AuthenticatedUser {
+export interface AuthenticatedUser {
   uid: string;
   email: string | null;
+  emailVerified: boolean;
   name: string | null;
   picture: string | null;
 }
@@ -21,12 +22,13 @@ function decodeToUser(decoded: DecodedIdToken): AuthenticatedUser {
   return {
     uid: decoded.uid,
     email: typeof decoded.email === "string" ? decoded.email : null,
+    emailVerified: decoded.email_verified === true,
     name: typeof decoded.name === "string" ? decoded.name : null,
     picture: typeof decoded.picture === "string" ? decoded.picture : null,
   };
 }
 
-async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) return null;
