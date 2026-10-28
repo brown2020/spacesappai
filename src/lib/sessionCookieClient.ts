@@ -4,13 +4,15 @@
  */
 export async function setServerSessionFromIdToken(
   idToken: string
-): Promise<void> {
+): Promise<"ok" | "rejected"> {
   const res = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken }),
   });
+  if (res.status === 401 || res.status === 403) return "rejected";
   if (!res.ok) throw new Error("Failed to create session");
+  return "ok";
 }
 
 export async function clearServerSession(): Promise<void> {
