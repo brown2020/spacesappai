@@ -5,7 +5,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getAuth, type Auth } from "firebase/auth";
-import { clientEnv } from "@/lib/env";
+import { clientEnv } from "@/lib/client-env";
 
 // ============================================================================
 // FIREBASE CLIENT CONFIGURATION

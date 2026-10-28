@@ -1,7 +1,8 @@
 import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
-import { clientEnv, serverEnv } from "@/lib/env";
+import { clientEnv } from "@/lib/client-env";
+import { serverEnv } from "@/lib/server-env";
 
 // ============================================================================
 // FIREBASE ADMIN CONFIGURATION

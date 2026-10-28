@@ -1,5 +1,5 @@
 import { Liveblocks } from "@liveblocks/node";
-import { serverEnv } from "@/lib/env";
+import { serverEnv } from "@/lib/server-env";
 
 // ============================================================================
 // LIVEBLOCKS CLIENT
