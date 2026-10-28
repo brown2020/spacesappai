@@ -22,6 +22,8 @@ describe("auth and mutation contracts", () => {
     assert.match(src, /requireAuthenticatedUser/);
     assert.match(src, /prepareSession/);
     assert.match(src, /authorize/);
+    assert.match(src, /role === "owner" \|\| role === "editor"/);
+    assert.doesNotMatch(src, /session\.FULL_ACCESS[\s\S]{0,80}else \{/);
   });
 
   it("session route verifies Firebase session cookies server-side", () => {
@@ -30,11 +32,15 @@ describe("auth and mutation contracts", () => {
       "utf8"
     );
     assert.match(src, /createSessionCookie|verifySessionCookie|adminAuth/);
+    assert.match(src, /isRecentAuthTime/);
+    assert.match(src, /isTrustedSessionPost/);
+    assert.match(src, /revokeRefreshTokens/);
   });
 
   it("document layout enforces auth before RoomProvider", () => {
     const src = readFileSync(join(root, "src/app/doc/[id]/(app)/layout.tsx"), "utf8");
     assert.match(src, /requireAuthenticatedUserOrRedirect/);
+    assert.match(src, /userHasRoomAccess/);
     assert.match(src, /RoomProvider/);
   });
 });

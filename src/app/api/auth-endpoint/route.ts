@@ -111,11 +111,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Grant access based on role — viewers get read-only, others get full access
-    if (role === "viewer") {
+    // Grant access based on role. Unknown roles fail closed.
+    if (role === "owner" || role === "editor") {
+      session.allow(roomId, session.FULL_ACCESS);
+    } else if (role === "viewer") {
       session.allow(roomId, session.READ_ACCESS);
     } else {
-      session.allow(roomId, session.FULL_ACCESS);
+      return apiErrorResponse(
+        403,
+        "Forbidden",
+        "You do not have access to this room"
+      );
     }
 
     // Authorize and return response
