@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Document from "@/components/Document";
 import { adminDb } from "@/firebase/firebaseAdmin";
-import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { COLLECTIONS } from "@/firebase/collections";
 import { getAuthenticatedUser } from "@/lib/firebase-session";
 import { userHasRoomAccess } from "@/lib/firestore-helpers";
 

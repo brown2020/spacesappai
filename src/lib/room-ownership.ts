@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "@/firebase/firebaseAdmin";
-import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { COLLECTIONS } from "@/firebase/collections";
 import {
   requireAuthenticatedUser,
   type AuthenticatedUser,

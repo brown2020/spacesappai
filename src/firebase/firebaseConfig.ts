@@ -7,6 +7,8 @@ import {
 import { getAuth, type Auth } from "firebase/auth";
 import { clientEnv } from "@/lib/client-env";
 
+export { COLLECTIONS } from "@/firebase/collections";
+
 // ============================================================================
 // FIREBASE CLIENT CONFIGURATION
 // ============================================================================
@@ -82,15 +84,3 @@ export const db: Firestore = getClientFirestore(app);
  */
 export const auth: Auth = getAuth(app);
 
-// ============================================================================
-// COLLECTION REFERENCES
-// ============================================================================
-
-/**
- * Collection names as constants for consistency
- */
-export const COLLECTIONS = {
-  DOCUMENTS: "documents",
-  USERS: "users",
-  ROOMS: "rooms",
-} as const;

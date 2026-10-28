@@ -1,5 +1,5 @@
 import { adminDb } from "@/firebase/firebaseAdmin";
-import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { COLLECTIONS } from "@/firebase/collections";
 import { evaluateAiQuota, type AiWindowState } from "@/lib/ai-guards";
 
 /**

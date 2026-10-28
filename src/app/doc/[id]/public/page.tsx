@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createElement, type ReactNode } from "react";
 import { adminDb } from "@/firebase/firebaseAdmin";
-import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { COLLECTIONS } from "@/firebase/collections";
 import { liveblocks } from "@/lib/liveblocks";
 import * as Y from "yjs";
 import PageIcon from "@/components/PageIcon";
