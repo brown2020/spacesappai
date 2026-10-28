@@ -1,5 +1,4 @@
-import admin from "firebase-admin";
-import { getApps, type App } from "firebase-admin/app";
+import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { clientEnv, serverEnv } from "@/lib/env";
@@ -46,8 +45,8 @@ function initializeFirebaseAdmin(): App {
     );
   }
 
-  return admin.initializeApp({
-    credential: admin.credential.cert(adminCredentials),
+  return initializeApp({
+    credential: cert(adminCredentials),
     storageBucket: clientEnv.firebase.storageBucket,
   });
 }

@@ -7,6 +7,7 @@ import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { BlockNoteEditor } from "@blocknote/core";
+import { CollaborationExtension } from "@blocknote/core/y";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
@@ -57,16 +58,18 @@ function BlockNote({
   // User display fields are intentional deps so collaboration cursors stay accurate.
   const editor = useMemo(() => {
     return BlockNoteEditor.create({
-      collaboration: {
-        // @ts-expect-error BlockNote expects y-protocols/awareness Awareness type,
-        // but Liveblocks bundles a compatible but structurally different Awareness type.
-        provider: provider,
-        fragment: doc.getXmlFragment("document-store"),
-        user: {
-          name: userName || "Anonymous",
-          color: stringToColor(userEmail || "anonymous"),
-        },
-      },
+      extensions: [
+        CollaborationExtension({
+          fragment: doc.getXmlFragment("document-store") as any,
+          user: {
+            name: userName || "Anonymous",
+            color: stringToColor(userEmail || "anonymous"),
+          },
+          provider: {
+            awareness: provider.awareness as any,
+          },
+        }),
+      ],
     });
   }, [doc, provider, userName, userEmail]);
 
