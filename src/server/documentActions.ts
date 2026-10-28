@@ -9,6 +9,7 @@ import { liveblocks } from "@/lib/liveblocks";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import { errorResponse, successResponse } from "@/lib/action-utils";
 import { getUserRoomRef, getDocumentRef, verifyOwnership } from "@/lib/firestore-helpers";
+import { isSafeCoverImageUrl } from "@/lib/cover-url";
 import { normalizeEmail } from "@/lib/utils";
 import type { ActionResponse, Comment, CreateDocumentResponse, RoomRole } from "@/types";
 
@@ -462,15 +463,8 @@ export async function updateDocumentCover(
     const user = await requireAuthenticatedUser();
 
     // Validate cover image URL
-    if (coverImage !== null) {
-      if (typeof coverImage !== "string" || coverImage.length > 2000) {
-        return errorResponse("VALIDATION_ERROR", "Invalid cover image URL.");
-      }
-      try {
-        new URL(coverImage);
-      } catch {
-        return errorResponse("VALIDATION_ERROR", "Please provide a valid URL.");
-      }
+    if (coverImage !== null && !isSafeCoverImageUrl(coverImage)) {
+      return errorResponse("VALIDATION_ERROR", "Cover image must be an https URL.");
     }
 
     await adminDb.runTransaction(async (transaction) => {

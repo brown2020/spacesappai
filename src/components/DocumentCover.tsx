@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { doc } from "firebase/firestore";
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import { db, COLLECTIONS } from "@/firebase/firebaseConfig";
+import { isSafeCoverImageUrl } from "@/lib/cover-url";
 import { updateDocumentCover } from "@/server/documentActions";
 import { useOwner } from "@/hooks";
 import { Button } from "./ui/button";
@@ -34,10 +35,8 @@ function CoverUrlInput({ onSubmit, isPending }: CoverUrlInputProps) {
     const trimmed = url.trim();
     if (!trimmed) return;
 
-    try {
-      new URL(trimmed);
-    } catch {
-      toast.error("Please enter a valid URL");
+    if (!isSafeCoverImageUrl(trimmed)) {
+      toast.error("Cover image must be an https URL");
       return;
     }
 
@@ -81,7 +80,9 @@ export default function DocumentCover({ documentId }: DocumentCoverProps) {
   const [showAddButton, setShowAddButton] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const coverImage = (data?.coverImage as string | null) ?? null;
+  const storedCover = (data?.coverImage as string | null) ?? null;
+  const coverImage =
+    storedCover && isSafeCoverImageUrl(storedCover) ? storedCover : null;
 
   const handleSetCover = useCallback(
     (url: string) => {
