@@ -121,12 +121,14 @@ function BlockNote({
 
 interface EditorToolbarProps {
   doc: Y.Doc;
+  roomId: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
 
 function EditorToolbar({
   doc,
+  roomId,
   darkMode,
   onToggleDarkMode,
 }: EditorToolbarProps) {
@@ -136,8 +138,8 @@ function EditorToolbar({
 
   return (
     <div className="flex items-center gap-2 justify-end mb-10">
-      <TranslateDocument doc={doc} />
-      <ChatToDocument doc={doc} />
+      <TranslateDocument doc={doc} roomId={roomId} />
+      <ChatToDocument doc={doc} roomId={roomId} />
 
       <Button
         className={buttonStyles}
@@ -231,11 +233,12 @@ function EditorSession({
   return (
     <div className="max-w-6xl mx-auto">
       {canEdit && (
-        <EditorToolbar
-          doc={doc}
-          darkMode={darkMode}
-          onToggleDarkMode={onToggleDarkMode}
-        />
+      <EditorToolbar
+        doc={doc}
+        roomId={room.id}
+        darkMode={darkMode}
+        onToggleDarkMode={onToggleDarkMode}
+      />
       )}
 
       <BlockNote

@@ -23,13 +23,14 @@ import AIModelSelect from "./AIModelSelect";
 
 interface TranslateDocumentProps {
   doc: Y.Doc;
+  roomId: string;
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export default function TranslateDocument({ doc }: TranslateDocumentProps) {
+export default function TranslateDocument({ doc, roomId }: TranslateDocumentProps) {
   const [language, setLanguage] = useState<SupportedLanguage | "">("");
 
   return (
@@ -50,7 +51,7 @@ export default function TranslateDocument({ doc }: TranslateDocumentProps) {
       emptyDocumentMessage="Document is empty. Add some content before translating."
       onSubmit={(content, modelName) => {
         if (!language) return Promise.reject(new Error("Language is required"));
-        return generateSummary(content, language, modelName);
+        return generateSummary(roomId, content, language, modelName);
       }}
     >
       {({ modelName, setModelName, isPending }) => (

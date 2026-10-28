@@ -56,7 +56,7 @@ interface UseStreamingRequestReturn {
  * });
  *
  * const handleSubmit = () => {
- *   execute(() => generateSummary(doc, language, model));
+ *   execute(() => generateSummary(roomId, doc, language, model));
  * };
  * ```
  */

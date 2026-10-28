@@ -7,8 +7,15 @@ import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { AI_PROMPTS, AI_LIMITS } from "@/constants";
+import { consumeAiQuota } from "@/lib/ai-quota";
+import {
+  isSupportedAiModel,
+  isSupportedLanguage,
+  normalizeAiQuestion,
+} from "@/lib/ai-guards";
 import { errorResponse } from "@/lib/action-utils";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
+import { getUserRoomRef } from "@/lib/firestore-helpers";
 import type { AIModelName, ActionResponse } from "@/types";
 
 // ============================================================================
@@ -50,14 +57,55 @@ function truncateDocument(document: string, maxLength: number): string {
  * Returns the processed document or an error response
  */
 function prepareDocument(document: string): { document: string } | ActionResponse {
-  if (!document || typeof document !== "string") {
+  if (typeof document !== "string" || document.length === 0) {
     return errorResponse("VALIDATION_ERROR", "Document content is required");
   }
-  
-  // Truncate if necessary (rather than rejecting)
+  if (document.length > AI_LIMITS.MAX_DOCUMENT_INPUT_LENGTH) {
+    return errorResponse("VALIDATION_ERROR", "Document is too large to send to AI.");
+  }
+
   const processedDocument = truncateDocument(document, AI_LIMITS.MAX_DOCUMENT_LENGTH);
-  
+
   return { document: processedDocument };
+}
+
+function isValidRoomId(roomId: string): boolean {
+  return typeof roomId === "string" && roomId.length > 0 && roomId.length <= 128 && !roomId.includes("/");
+}
+
+/**
+ * AI calls require an editor or owner on the room, a known model, and quota.
+ */
+async function authorizeAiRequest(
+  roomId: string,
+  modelName: unknown
+): Promise<{ model: AIModelName; uid: string } | ActionResponse> {
+  const user = await requireAuthenticatedUser();
+
+  if (!isValidRoomId(roomId)) {
+    return errorResponse("VALIDATION_ERROR", "A document id is required.");
+  }
+
+  if (!isSupportedAiModel(modelName)) {
+    return errorResponse("VALIDATION_ERROR", "Unsupported model.");
+  }
+
+  const roomSnap = await getUserRoomRef(user.uid, roomId).get();
+  const role = roomSnap.data()?.role;
+  if (!roomSnap.exists || (role !== "owner" && role !== "editor")) {
+    return errorResponse("FORBIDDEN", "You don't have permission to use AI on this document.");
+  }
+
+  return { model: modelName, uid: user.uid };
+}
+
+async function consumeAuthorizedQuota(uid: string): Promise<ActionResponse | null> {
+  const allowed = await consumeAiQuota(uid);
+  if (allowed) return null;
+  return errorResponse(
+    "RATE_LIMITED",
+    "Too many AI requests. Try again in a little while."
+  );
 }
 
 // ============================================================================
@@ -98,13 +146,10 @@ const MODEL_MAP = {
  * Get the AI model instance for a given model name
  */
 function getModel(modelName: AIModelName) {
-  const modelFactory = MODEL_MAP[modelName];
-
-  if (!modelFactory) {
+  if (!Object.prototype.hasOwnProperty.call(MODEL_MAP, modelName)) {
     throw new Error(`Unsupported model: ${modelName}`);
   }
-
-  return modelFactory();
+  return MODEL_MAP[modelName]();
 }
 
 // ============================================================================
@@ -151,26 +196,30 @@ async function generateStreamingResponse(
  * @returns Streamable value with the summary text, or ActionResponse with error
  */
 export async function generateSummary(
+  roomId: string,
   document: string,
   language: string,
   modelName: AIModelName
 ): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
   try {
-    await requireAuthenticatedUser();
+    const authorized = await authorizeAiRequest(roomId, modelName);
+    if ("success" in authorized) return authorized;
 
-    // Validate and prepare document (truncates if too large)
     const prepared = prepareDocument(document);
     if ("success" in prepared) {
-      return prepared; // Return error response
+      return prepared;
     }
 
-    if (!language || typeof language !== "string") {
-      return errorResponse("VALIDATION_ERROR", "Language is required");
+    if (!isSupportedLanguage(language)) {
+      return errorResponse("VALIDATION_ERROR", "Unsupported language.");
     }
+
+    const quota = await consumeAuthorizedQuota(authorized.uid);
+    if (quota) return quota;
 
     const userPrompt = `Provided document:\n${prepared.document}\n\nProvided language:\n${language}`;
 
-    return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, modelName);
+    return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, authorized.model);
   } catch (error) {
     console.error("[generateSummary] Error:", error);
     if (isUnauthorizedError(error)) {
@@ -192,29 +241,37 @@ export async function generateSummary(
  * @returns Streamable value with the answer text, or ActionResponse with error
  */
 export async function generateAnswer(
+  roomId: string,
   document: string,
   question: string,
   modelName: AIModelName
 ): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
   try {
-    await requireAuthenticatedUser();
+    const authorized = await authorizeAiRequest(roomId, modelName);
+    if ("success" in authorized) return authorized;
 
-    // Validate and prepare document (truncates if too large)
     const prepared = prepareDocument(document);
     if ("success" in prepared) {
-      return prepared; // Return error response
+      return prepared;
     }
 
-    if (!question || typeof question !== "string" || !question.trim()) {
-      return errorResponse("VALIDATION_ERROR", "Question is required");
+    const normalizedQuestion = normalizeAiQuestion(question);
+    if (!normalizedQuestion) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `Question must be 1-${AI_LIMITS.MAX_QUESTION_LENGTH} characters.`
+      );
     }
 
-    const userPrompt = `Provided document:\n${prepared.document}\n\nProvided question:\n${question}`;
+    const quota = await consumeAuthorizedQuota(authorized.uid);
+    if (quota) return quota;
+
+    const userPrompt = `Provided document:\n${prepared.document}\n\nProvided question:\n${normalizedQuestion}`;
 
     return generateStreamingResponse(
       AI_PROMPTS.QUESTION_ANSWER,
       userPrompt,
-      modelName
+      authorized.model
     );
   } catch (error) {
     console.error("[generateAnswer] Error:", error);

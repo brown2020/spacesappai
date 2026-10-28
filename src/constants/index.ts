@@ -1,4 +1,5 @@
 import type { AIModelOption, SupportedLanguage } from "@/types";
+import { AI_INPUT_LIMITS, AI_LANGUAGE_NAMES } from "@/lib/ai-guards";
 
 // ============================================================================
 // AI MODELS
@@ -27,18 +28,7 @@ export const DEFAULT_AI_MODEL = "gpt-4o" as const;
 /**
  * Supported languages for translation
  */
-export const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = [
-  "english",
-  "french",
-  "spanish",
-  "german",
-  "italian",
-  "portuguese",
-  "chinese",
-  "russian",
-  "hindi",
-  "japanese",
-] as const;
+export const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = AI_LANGUAGE_NAMES;
 
 /**
  * Language display names
@@ -72,12 +62,20 @@ export const AI_PROMPTS = {
 export const AI_LIMITS = {
   /** Maximum document length in characters for AI processing */
   MAX_DOCUMENT_LENGTH: 400_000,
+  /** Reject document payloads larger than this before truncation */
+  MAX_DOCUMENT_INPUT_LENGTH: AI_INPUT_LIMITS.MAX_DOCUMENT_INPUT_LENGTH,
+  /** Maximum question length sent to the model */
+  MAX_QUESTION_LENGTH: AI_INPUT_LIMITS.MAX_QUESTION_LENGTH,
   /** Ratio of document to keep from the beginning when truncating */
   TRUNCATION_HEAD_RATIO: 0.75,
   /** Ratio of document to keep from the end when truncating */
   TRUNCATION_TAIL_RATIO: 0.25,
   /** Characters reserved for truncation message */
   TRUNCATION_MESSAGE_RESERVE: 100,
+  /** Per-user AI request window */
+  RATE_LIMIT_WINDOW_MS: AI_INPUT_LIMITS.RATE_LIMIT_WINDOW_MS,
+  /** Maximum AI requests per user per window */
+  RATE_LIMIT_MAX_REQUESTS: AI_INPUT_LIMITS.RATE_LIMIT_MAX_REQUESTS,
 } as const;
 
 // ============================================================================

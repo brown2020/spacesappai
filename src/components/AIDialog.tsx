@@ -71,7 +71,7 @@ interface AIDialogProps {
  *   description="Generate a translated summary"
  *   successMessage="Translation complete"
  *   errorMessage="Failed to translate"
- *   onSubmit={(content, model) => generateSummary(content, language, model)}
+ *   onSubmit={(content, model) => generateSummary(roomId, content, language, model)}
  * >
  *   {({ modelName, setModelName, isPending }) => (
  *     <form>...</form>

@@ -15,13 +15,14 @@ import AIModelSelect from "./AIModelSelect";
 
 interface ChatToDocumentProps {
   doc: Y.Doc;
+  roomId: string;
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export default function ChatToDocument({ doc }: ChatToDocumentProps) {
+export default function ChatToDocument({ doc, roomId }: ChatToDocumentProps) {
   const [question, setQuestion] = useState("");
 
   return (
@@ -40,7 +41,7 @@ export default function ChatToDocument({ doc }: ChatToDocumentProps) {
       emptyDocumentMessage="Document is empty. Add some content before asking questions."
       onSubmit={(content, modelName) => {
         if (!question.trim()) return Promise.reject(new Error("Question is required"));
-        return generateAnswer(content, question, modelName);
+        return generateAnswer(roomId, content, question, modelName);
       }}
     >
       {({ modelName, setModelName, isPending }) => (
