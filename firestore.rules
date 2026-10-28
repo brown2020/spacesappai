@@ -6,12 +6,16 @@ rules_version = '2';
 //
 // Data Model:
 //   documents/{documentId}          - Document metadata (title, timestamps)
-//   users/{uid}/rooms/{docId} - User's access to documents (role-based)
+//   users/{uid}/rooms/{docId}       - User's access to documents (role-based)
 //
 // Roles:
 //   owner  - Can read, write, delete document; manage users
 //   editor - Can read and write document content
 //   viewer - Can read document content only
+//
+// Membership rows (users/{uid}/rooms/{docId}) are written only by the Admin SDK.
+// Client creates of those rows were able to self-assign role "owner".
+// Comment writes also go through the Admin SDK so authorName cannot be spoofed.
 //
 // Copy this entire file to Firebase Console > Firestore > Rules
 // ============================================================================
@@ -23,69 +27,59 @@ service cloud.firestore {
     // HELPER FUNCTIONS
     // ========================================================================
 
-    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Get the user's uid from auth token
     function getUserId() {
       return request.auth.uid;
     }
 
-    // Check if user has any access to a document (owner or editor)
     function hasRoomAccess(documentId) {
       return exists(/databases/$(database)/documents/users/$(getUserId())/rooms/$(documentId));
     }
 
-    // Get user's role for a document
     function getUserRole(documentId) {
       return get(/databases/$(database)/documents/users/$(getUserId())/rooms/$(documentId)).data.role;
     }
 
-    // Check if user is the owner of a document
     function isOwner(documentId) {
       return hasRoomAccess(documentId) && getUserRole(documentId) == 'owner';
     }
 
-    // Check if user is an editor of a document
-    function isEditor(documentId) {
-      return hasRoomAccess(documentId) && getUserRole(documentId) == 'editor';
-    }
-
-    // Check if user can read a document (any role).
     function canReadDocument(documentId) {
       return hasRoomAccess(documentId);
     }
 
-    // Check if user can write a document (owner or editor, not viewer).
     function canWriteDocument(documentId) {
       return hasRoomAccess(documentId)
         && (getUserRole(documentId) == 'owner' || getUserRole(documentId) == 'editor');
     }
 
-    // Validate document data on create/update
+    function isHttpsUrl(value) {
+      return value is string
+        && value.size() > 0
+        && value.size() <= 2000
+        && value.matches('^https://.+');
+    }
+
     function isValidDocumentData() {
       let data = request.resource.data;
       return data.keys().hasAll(['title'])
+        && data.keys().hasOnly(['title', 'icon', 'coverImage', 'isPublished', 'createdAt', 'updatedAt', 'ownerId'])
         && data.title is string
         && data.title.size() > 0
         && data.title.size() <= 500
-        // icon is optional, but if present must be null or a string <= 10 chars (emoji)
-        && (!('icon' in data.keys()) || data.icon == null || (data.icon is string && data.icon.size() <= 10))
-        // isPublished is optional, but if present must be a boolean
-        && (!('isPublished' in data.keys()) || data.isPublished is bool)
-        // coverImage is optional, but if present must be null or a string <= 2000 chars
-        && (!('coverImage' in data.keys()) || data.coverImage == null || (data.coverImage is string && data.coverImage.size() <= 2000));
+        && (!('icon' in data) || data.icon == null || (data.icon is string && data.icon.size() <= 10))
+        && (!('coverImage' in data) || data.coverImage == null || isHttpsUrl(data.coverImage))
+        && (!('isPublished' in data) || data.isPublished is bool)
+        && (!('ownerId' in data) || data.ownerId == null || (data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() <= 128))
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
-    // Validate room data
-    function isValidRoomData() {
-      let data = request.resource.data;
-      return data.keys().hasAll(['userId', 'role', 'roomId', 'createdAt'])
-        && data.userId is string
-        && data.role in ['owner', 'editor', 'viewer']
-        && data.roomId is string;
+    function isPublishedFlag(data) {
+      return data.get('isPublished', false) == true;
     }
 
     // ========================================================================
@@ -93,47 +87,33 @@ service cloud.firestore {
     // ========================================================================
 
     match /documents/{documentId} {
-      // Allow read if user has any room access (owner, editor, or viewer)
       allow read: if isAuthenticated() && canReadDocument(documentId);
 
-      // Allow create if authenticated with valid data
-      // Note: Document creation is primarily handled by server actions with admin SDK,
-      // but we validate client-side creates as a defense-in-depth measure.
-      allow create: if isAuthenticated() && isValidDocumentData();
+      // Client creates cannot publish or pin an owner id.
+      // The Admin SDK bypasses these rules for createNewDocument().
+      allow create: if isAuthenticated()
+        && isValidDocumentData()
+        && !isPublishedFlag(request.resource.data)
+        && request.resource.data.get('ownerId', null) == null;
 
-      // Allow update if user can write (owner or editor, not viewer)
+      // Editors may update content fields. Publishing and ownerId stay owner/server controlled.
       allow update: if isAuthenticated()
         && canWriteDocument(documentId)
-        && isValidDocumentData();
+        && isValidDocumentData()
+        && request.resource.data.get('ownerId', null) == resource.data.get('ownerId', null)
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+        && (
+          isPublishedFlag(request.resource.data) == isPublishedFlag(resource.data)
+          || isOwner(documentId)
+        );
 
-      // Allow delete only if user is the owner
       allow delete: if isAuthenticated() && isOwner(documentId);
 
-      // Comments subcollection
-      // Server actions use the Admin SDK and bypass rules; these client rules are
-      // defense-in-depth and must still enforce parent document access.
+      // Comments are written by server actions (Admin SDK), which set author fields
+      // from the verified session. Client writes could impersonate authorName.
       match /comments/{commentId} {
-        allow read: if isAuthenticated()
-          && canReadDocument(documentId);
-        allow create: if isAuthenticated()
-          && canReadDocument(documentId)
-          && request.resource.data.keys().hasAll(['authorId', 'authorName', 'content', 'createdAt'])
-          && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'content', 'createdAt'])
-          && request.resource.data.authorId == getUserId()
-          && request.resource.data.authorName is string
-          && request.resource.data.authorName.size() > 0
-          && request.resource.data.authorName.size() <= 200
-          && (!('authorAvatar' in request.resource.data.keys())
-            || request.resource.data.authorAvatar == null
-            || (request.resource.data.authorAvatar is string
-              && request.resource.data.authorAvatar.size() <= 2000))
-          && request.resource.data.content is string
-          && request.resource.data.content.size() > 0
-          && request.resource.data.content.size() <= 5000
-          && request.resource.data.createdAt is timestamp;
-        allow delete: if isAuthenticated()
-          && canReadDocument(documentId)
-          && (resource.data.authorId == getUserId() || isOwner(documentId));
+        allow read: if isAuthenticated() && canReadDocument(documentId);
+        allow create, update, delete: if false;
       }
     }
 
@@ -142,43 +122,15 @@ service cloud.firestore {
     // ========================================================================
 
     match /users/{uid} {
-      // Users can read their own user document
       allow read: if isAuthenticated() && getUserId() == uid;
+      allow create, update, delete: if false;
 
-      // Room subcollection - tracks which documents a user has access to
       match /rooms/{roomId} {
-        // Users can read their own room entries
         allow read: if isAuthenticated() && getUserId() == uid;
 
-        // Allow create if:
-        // 1. User is creating their own entry as owner (new document), OR
-        // 2. Existing owner is inviting this user as editor
-        allow create: if isAuthenticated()
-          && isValidRoomData()
-          && (
-            // Creating own entry as owner
-            (getUserId() == uid
-              && request.resource.data.userId == uid
-              && request.resource.data.role == 'owner')
-            // OR being invited by the document owner as editor or viewer
-            || (isOwner(roomId)
-              && request.resource.data.userId == uid
-              && request.resource.data.role in ['editor', 'viewer'])
-          );
-
-        // Only owners can update room entries (e.g., change roles)
-        allow update: if isAuthenticated()
-          && isOwner(roomId)
-          && isValidRoomData();
-
-        // Allow delete if:
-        // 1. Owner is removing someone else, OR
-        // 2. User is removing themselves (leaving document)
-        allow delete: if isAuthenticated()
-          && (
-            isOwner(roomId)
-            || getUserId() == uid
-          );
+        // Do not allow clients to create, change, or delete role rows.
+        // Self-service owner creates granted access to any document id.
+        allow create, update, delete: if false;
       }
     }
 
@@ -186,8 +138,7 @@ service cloud.firestore {
     // COLLECTION GROUP QUERIES
     // ========================================================================
 
-    // Allow collection group queries on 'rooms' for finding all users in a room
-    // This is used by useRoomUsers hook
+    // Members can list collaborator rows for a document they can already access.
     match /{path=**}/rooms/{roomId} {
       allow read: if isAuthenticated() && hasRoomAccess(roomId);
     }
