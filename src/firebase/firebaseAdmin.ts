@@ -41,6 +41,9 @@ function initializeFirebaseAdmin(): App {
 
   const adminCredentials = getAdminCredentials();
   if (!adminCredentials.projectId || !adminCredentials.privateKey) {
+    console.warn(
+      "[firebase] Firebase Admin is not configured. Set FIREBASE_PROJECT_ID and FIREBASE_PRIVATE_KEY before using server Firestore or Auth."
+    );
     throw new Error(
       "Firebase Admin credentials are required (FIREBASE_PROJECT_ID / FIREBASE_PRIVATE_KEY)."
     );
