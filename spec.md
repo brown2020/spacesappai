@@ -1,339 +1,113 @@
-# spec.md — Spaces Improvement Spec
+# Spaces specification
 
-> Bridges from CLAUDE.md (what we have) to competitor-analysis.md (what we need).
-> Focused on: **document creation, linking, and sharing.**
+As built on `dev`, October 2026. This describes the product the code implements. Planned work is in `roadmap.md`.
 
----
+## Product
 
-## Current Implementation Snapshot (2026-06-20)
+Spaces is a collaborative document app.
 
-This section records code evidence from the current `dev` branch for codebase-health work. It does not approve new roadmap priorities.
+- A signed-in user can create a document, edit its title and emoji icon, and delete it.
+- The owner can invite another Firebase user by email as an editor or a viewer, change that role, or remove them.
+- Owners and editors edit the BlockNote document. Viewers can open it read-only.
+- The owner can publish a public read-only page that does not require sign-in.
+- Owners and editors can open an AI dialog to summarize/translate the document or ask a question about the text they send.
+- Anyone with access can add and read page-level comments. The author name is taken from the server session.
 
-Implemented in the current code:
+There is no viewer-only public link besides the publish flag, no file upload, no trash, no export, and no document-to-document links.
 
-- Document search UI exists in `src/components/SearchDialog.tsx`, with `Cmd+K` / `Ctrl+K` wiring in `src/components/Header.tsx` and a sidebar trigger in `src/components/Sidebar.tsx`.
-- Viewer role support exists in `src/types/index.ts`, `src/hooks/use-owner.ts`, `src/components/Editor.tsx`, `src/app/api/auth-endpoint/route.ts`, and `firestore.rules`.
-- Public sharing exists through `src/components/ShareMenu.tsx`, `togglePublishDocument()` in `src/lib/documentActions.ts`, and the route `src/app/doc/[id]/public/page.tsx`.
-- Cover images exist through `src/components/DocumentCover.tsx`, `updateDocumentCover()` in `src/lib/documentActions.ts`, and `coverImage` validation in `firestore.rules`.
-- Page-level comments exist through `src/components/Comments.tsx`, `src/hooks/use-comments.ts`, comment server actions in `src/lib/documentActions.ts`, and comments rules in `firestore.rules`.
-- Title updates now go through the server action `updateDocumentTitle()` and `src/hooks/use-document-title.ts`.
+## Routes
 
-Current validation notes:
+| Path | Behavior |
+| --- | --- |
+| `/` | Home. Static. Renders without Firebase config. |
+| `/login`, `/signup`, `/forgot-password` | Email/password and Google auth screens. |
+| `/doc/[id]` | Signed-in document. Requires a session and a membership row. |
+| `/doc/[id]/public` | Published document as sanitized React, revalidated every 60 seconds. |
+| `POST /api/auth/session` | Exchange a fresh Firebase ID token for an httpOnly session cookie. |
+| `DELETE /api/auth/session` | Clear the cookie and revoke that user’s Firebase refresh tokens. |
+| `POST /api/auth-endpoint` | Liveblocks auth for one room. |
 
-- `package.json` exposes `npm run lint`, `npm run build`, `npm run dev`, and `npm run start`.
-- `SearchDialog` currently ignores typed search text and omits viewer-role documents from the searchable list; this is a codebase-improvement bug, not a product-roadmap decision.
-- Comments are implemented with a polling server-action hook, not a Firestore real-time subscription.
-- `README.md`, `CLAUDE.md`, and the roadmap sections below contain stale version and feature-status details and should be reconciled during documentation cleanup.
+## Access model
 
-## 1. Table Stakes Gaps
+Membership is `users/{uid}/rooms/{documentId}` with `role` of `owner`, `editor`, or `viewer`. Clients cannot create, update, or delete those rows. Server actions write them with the Admin SDK.
 
-Things Notion has that we're missing and must add to be competitive.
+Firestore document rules:
 
----
+- Reads require membership.
+- Creates cannot set `isPublished` or `ownerId`.
+- Updates cannot change `ownerId` or `createdAt`.
+- Only an owner can change `isPublished`.
+- Cover values, when present, must be `https` URLs.
+- Comment documents are readable by members. Client writes are denied.
 
-### 1.1 Document Search
+Liveblocks:
 
-**What we have:** Nothing. No way to find a document except scrolling the sidebar.
+- `owner` and `editor`: full access
+- `viewer`: read access
+- Any other role: rejected
 
-**What Notion does:** Full-text search across all pages. Filter by date, type, team. Recent pages. Keyboard shortcut (`Cmd+K`).
+Document content lives in the Liveblocks Yjs room, not in Firestore. Firestore stores title, icon, cover, publish flag, `ownerId`, and timestamps.
 
-**What we'll build:**
-- `Cmd+K` / `Ctrl+K` opens a search dialog (command palette style)
-- Searches document **titles** across all documents the user has access to (owner + editor)
-- Results show: page icon, title, role badge, last updated time
-- Click a result → navigate to that document
-- Debounced input, instant results (client-side filtering from already-loaded sidebar data for speed; no new Firestore queries needed since `useUserDocuments` already fetches all user documents)
-- Empty state: "No documents found"
-- Keyboard navigation: arrow keys + Enter to select
+## Auth
 
-**Files affected:** New `SearchDialog.tsx` component, update `Header.tsx` to add trigger, update `Sidebar.tsx` to add search button
+1. The browser signs in with Firebase Auth.
+2. `POST /api/auth/session` accepts the ID token only when the body is JSON, the `Origin` host matches the `Host` header, and `auth_time` is within five minutes (one minute of future clock skew is allowed).
+3. The session cookie lasts five days. Later ID-token refreshes that fall outside the five-minute window do not clear a still-valid cookie.
+4. Logout revokes refresh tokens. Session verification checks revocation.
+5. If the public Firebase config is missing, the client module logs a warning and does not call `getAuth()` during `next build` or server render.
 
-**Data model changes:** None — we already have all document titles loaded in the sidebar via `useUserDocuments`
+## Editor and collaboration
 
----
+- BlockNote `^0.56` with the shadcn UI, Liveblocks Yjs provider, and live cursors.
+- Page icon via an emoji picker. Cover images are https URLs only, checked in the client and in `updateDocumentCover`.
+- Viewers get a non-editable editor.
+- Ownership repair (`ensureRoomHasOwner`) promotes an editor only when no owner remains, and promotes a viewer only when that user’s verified email matches a legacy owner record. It will not create a second owner when one already exists.
 
-### 1.2 Cover Images
+## Sharing and the public page
 
-**What we have:** Page icons (emoji) only. No visual banner.
+- Invite, role change, remove, and publish/unpublish are owner actions in `src/server/documentActions.ts`.
+- The public page returns not found unless `isPublished` is true.
+- Metadata for an unpublished document, and for a private document the viewer cannot access, uses a generic title.
+- Public Yjs payloads larger than 2 MB are not applied.
+- Images on the public page render through a client `RemoteImage` component so the server page does not pass a function into `next/image`.
 
-**What Notion does:** Full-width cover image at the top of every page. Choose from gallery, upload, paste URL, or Unsplash. Repositionable.
+## Comments
 
-**What we'll build:**
-- Optional cover image displayed as a full-width banner above the document title
-- "Add cover" button appears on hover above the title area (like Notion)
-- Cover source: paste an image URL. (No upload or Unsplash integration for v1 — keep it simple)
-- "Change cover" and "Remove cover" buttons when a cover exists
-- Cover stored as a `coverImage: string | null` field on the Firestore document
-- Server action `updateDocumentCover(roomId, url)` with auth + access verification
-- Cover displays in a fixed-height container with `object-cover` for consistent appearance
+- `addComment`, `deleteComment`, and `getComments` are server actions.
+- `useComments` polls `getComments` every 10 seconds.
+- Author display fields are set on the server. Client writes cannot spoof them.
 
-**Files affected:** Update `Document.tsx` to render cover, new `DocumentCover.tsx` component, update `documentActions.ts` with new server action, update Firestore rules for `coverImage` field, update `SpaceDocument` type
+## Search
 
-**Data model changes:**
-```
-documents/{documentId}
-  + coverImage?: string | null     (URL)
-```
+`SearchDialog` loads the signed-in user’s owner, editor, and viewer documents and filters by the typed query against title, role, and id. It does not search document body text.
 
----
+## AI
 
-### 1.3 Public Sharing (Publish to Web)
+Models, unchanged:
 
-**What we have:** Documents are only accessible to invited users (owner + editors). No way to share a read-only link.
+- `gpt-4o`
+- `gemini-1.5-pro`
+- `mistral-large`
+- `claude-3-5-sonnet`
+- `llama-v3p1-405b` (Fireworks)
 
-**What Notion does:** "Publish" tab in share menu. One toggle makes the page publicly accessible via URL. Anyone with the link can view.
+Languages: english, french, spanish, german, italian, portuguese, chinese, russian, hindi, japanese.
 
-**What we'll build:**
-- New "Share" button in the document header (next to Invite/Delete)
-- Opens a share popover/dialog with two sections:
-  1. **People with access** — existing user list (currently in ManageUsers)
-  2. **Public access** — toggle switch: "Publish to web"
-- When published:
-  - Document is accessible at `/doc/[id]/public` (new route) without authentication
-  - The page renders the document content read-only (no editor, no toolbar, no cursor tracking)
-  - Shows: cover image, icon, title, rendered BlockNote content
-  - Shows a "Built with Spaces" footer with link to home
-- When unpublished: the public route returns 404
-- `isPublished: boolean` field on the Firestore document (default `false`)
-- Server action `togglePublishDocument(roomId, publish: boolean)` — owner only
-- Public route fetches document content from Liveblocks Yjs storage via the server (Admin/Node SDK), renders it as static HTML
-- Copy link button for the public URL
+Limits:
 
-**Files affected:** New `ShareDialog.tsx` component, new `src/app/doc/[id]/public/page.tsx` route, update `documentActions.ts`, update `Document.tsx` header, update types, update Firestore rules
+- Document input over 1,000,000 characters is rejected. Shorter text is truncated to 400,000 characters before the model call.
+- Questions must be 1–2,000 characters.
+- 20 requests per user per hour, stored at `users/{uid}/private/aiRateLimit`. Client rules do not allow that path. If the counter write fails, the request does not run.
 
-**Data model changes:**
-```
-documents/{documentId}
-  + isPublished: boolean           (default false)
-```
+The caller must be an owner or editor of the given room. Viewers are rejected.
 
----
+## Build and tests
 
-### 1.4 Viewer Role
+- `npm run build` succeeds with `NEXT_PUBLIC_FIREBASE_*` and server secrets unset.
+- Tests are Node’s built-in runner over `tests/*.test.ts` (auth contracts, Firestore rule source, redirects, session guards, AI guards, ownership policy, and related units).
+- CI on Node 22 runs lint, typecheck, tests, and build without injecting secrets.
+- `tsc` is TypeScript 7.0. ESLint imports the TypeScript 6 API through the `@typescript/typescript6` package aliased as `typescript`, because typescript-eslint does not support the TypeScript 7 API yet.
 
-**What we have:** Two roles: owner and editor. Everyone who has access can edit.
+## Indexes to deploy
 
-**What Notion does:** Four levels: full access, can edit, can comment, can view.
-
-**What we'll build:**
-- Add `"viewer"` to the `RoomRole` type: `"owner" | "editor" | "viewer"`
-- Viewers can:
-  - See the document (read-only BlockNote view)
-  - See the sidebar entry
-  - See other users' avatars and cursors
-- Viewers cannot:
-  - Edit document content
-  - Change title or icon
-  - Invite or remove users
-  - Delete the document
-- When inviting a user, the owner chooses "Editor" or "Viewer" from a dropdown
-- In ManageUsers, show the role badge and allow owner to change roles
-- Liveblocks auth endpoint grants read-only access for viewers
-- Editor toolbar and edit controls hidden for viewers
-
-**Files affected:** Update `InviteUser.tsx` (role picker), update `ManageUsers.tsx` (role display + change), update `Editor.tsx` (read-only mode), update `Document.tsx` (hide edit controls), update `auth-endpoint/route.ts` (Liveblocks permissions), update types, update Firestore rules, update `documentActions.ts` (new `updateUserRole` action)
-
-**Data model changes:**
-```
-users/{uid}/rooms/{documentId}
-  role: "owner" | "editor" | "viewer"    (was: "owner" | "editor")
-```
-
----
-
-### 1.5 Page-Level Comments
-
-**What we have:** Nothing. No way to leave feedback on a document.
-
-**What Notion does:** Page-level discussion thread + inline comments on specific blocks. Threaded replies. Resolve/unresolve. @-mentions.
-
-**What we'll build (v1 — page-level only, no inline):**
-- Comments button in the document toolbar (shows count badge)
-- Opens a comments side panel (slide-in from right)
-- Anyone with access (owner, editor, viewer) can add comments
-- Each comment shows: author name, avatar, timestamp, message text
-- Comments are stored in a Firestore subcollection: `documents/{docId}/comments/{commentId}`
-- Real-time updates via `useCollection` (react-firebase-hooks)
-- Delete own comments. Owner can delete any comment
-- Sorted by newest first
-- Empty state: "No comments yet. Start a discussion."
-
-**Not in v1:** Inline/block-level comments, threaded replies, resolve/unresolve, @-mentions, notifications
-
-**Files affected:** New `Comments.tsx` component, new `CommentInput.tsx`, update `Document.tsx` (add comments button + panel), new server actions in `documentActions.ts` (`addComment`, `deleteComment`), update types, update Firestore rules
-
-**Data model changes:**
-```
-documents/{documentId}/comments/{commentId}
-  ├── authorId: string
-  ├── authorName: string
-  ├── authorAvatar?: string
-  ├── content: string
-  ├── createdAt: Timestamp
-  └── updatedAt: Timestamp
-```
-
----
-
-### 1.6 Document Search / Linking Within the Editor
-
-**What we have:** No way to reference another document from within a document.
-
-**What Notion does:** Type `@` or `[[` to search and insert an inline link to another page. Dynamic titles. Backlinks.
-
-**What we'll build (v1 — link insertion only):**
-- In the BlockNote editor, add a custom slash command: `/link`
-- Triggers a search popover showing the user's documents (same data as sidebar)
-- User selects a document → inserts an inline link with the document's icon and title
-- The link navigates to `/doc/[id]` when clicked
-- Link text is the document title at the time of insertion (not dynamically updated in v1)
-
-**Not in v1:** `@` or `[[` trigger syntax, dynamic title updates, backlinks, block-level links
-
-**Files affected:** Update `Editor.tsx` to register custom slash command, new inline content type or BlockNote link configuration
-
-**Data model changes:** None — links are stored in Yjs document content
-
----
-
-## 2. Improvement Opportunities
-
-Things we both have, but Notion does better.
-
----
-
-### 2.1 Share Menu Consolidation
-
-**What we have:** Three separate buttons/dialogs: "Invite" (InviteUser), "Users (N)" (ManageUsers), and "Delete" (DeleteDocument). Scattered across the document header.
-
-**What Notion does:** One "Share" button that opens a unified popover: invite, manage access, publish to web, copy link — all in one place.
-
-**What we'll build:**
-- Consolidate into a single **"Share" button** that opens a unified dialog/popover
-- Sections:
-  1. **Invite** — email input + role selector (editor/viewer) + send button
-  2. **People with access** — list of users, their roles, remove/change role options
-  3. **Public link** — publish toggle + copy URL button
-- Remove the separate InviteUser, ManageUsers components as standalone buttons
-- Keep DeleteDocument as a separate action (destructive actions shouldn't live in the share menu)
-
-**Files affected:** New `ShareMenu.tsx` (consolidates InviteUser + ManageUsers + public sharing), update `Document.tsx` header layout
-
----
-
-### 2.2 Title Editing via Server Action
-
-**What we have:** `use-document-title` writes directly to Firestore via the client SDK, bypassing server-side validation.
-
-**What Notion does:** N/A (implementation detail), but the pattern should be: all writes go through validated server actions.
-
-**What we'll build:**
-- New server action `updateDocumentTitle(roomId, title)` in `documentActions.ts`
-- Verifies auth + room access (any role except viewer can update)
-- Validates title (non-empty, <= 500 chars)
-- Uses `FieldValue.serverTimestamp()` for `updatedAt`
-- Update `use-document-title` hook to call the server action instead of direct Firestore write
-- Keep optimistic updates for instant UI feedback
-
-**Files affected:** Update `documentActions.ts`, update `use-document-title.ts`, update Firestore rules (can tighten client-side write access)
-
----
-
-### 2.3 Soft Delete (Trash)
-
-**What we have:** Delete is permanent and immediate. No recovery.
-
-**What Notion does:** Soft delete to trash. 30-day retention. Restore option.
-
-**What we'll build:**
-- Instead of permanent deletion, set `deletedAt: Timestamp` on the document
-- Deleted documents disappear from the sidebar but are not removed from Firestore
-- New "Trash" section at the bottom of the sidebar
-- Trash shows deleted documents with "Restore" and "Delete forever" options
-- Auto-purge: a note in the UI says "Documents in trash are permanently deleted after 30 days" (actual auto-purge can be a Cloud Function later; for now, manual)
-- "Delete forever" does the current permanent deletion
-
-**Files affected:** Update `deleteDocument()` action (soft delete), new `restoreDocument()` and `permanentlyDeleteDocument()` actions, update `Sidebar.tsx` (trash section), update `useUserDocuments` (filter out deleted), update types
-
-**Data model changes:**
-```
-documents/{documentId}
-  + deletedAt?: Timestamp | null
-```
-
----
-
-## 3. Differentiators
-
-Things we can do that Notion doesn't, or ways we can be meaningfully better.
-
----
-
-### 3.1 Live Cursors (Already Have — Polish)
-
-**What we have:** Live cursor tracking with name tags and colors. Notion doesn't have this.
-
-**What we'll improve:**
-- This already works well. No changes needed in this spec cycle.
-- Future: show who's actively typing (typing indicator), selection highlighting.
-
----
-
-### 3.2 AI at Every Tier
-
-**What we have:** AI translation and Q&A available to all users. Notion locks AI behind $15/month Business plan.
-
-**What we'll improve:**
-- No changes needed for this spec. Already a differentiator.
-- Future: inline AI assistance within the editor (not just modal dialogs).
-
----
-
-### 3.3 Open Source
-
-**What we have:** AGPL-3.0 license. Full source available.
-
-**What we'll improve:**
-- No code changes. This is a positioning differentiator.
-
----
-
-## 4. Not Doing
-
-Things Notion has that we're intentionally skipping and why.
-
-| Feature | Why We're Skipping It |
-|---------|----------------------|
-| **Databases / Kanban / Calendar / Timeline** | Not our product. We're a document editor, not a project management tool. This is Notion's complexity moat and also their bloat. |
-| **Template gallery** | Premature. Need more block types and features first. Templates are a growth/content play, not a core feature. |
-| **Inline comments** | Complex to build well (anchoring comments to specific text ranges in a CRDT-based editor). Page-level comments first, inline later. |
-| **Threaded comment replies** | Over-engineering for v1. Flat comments are fine to start. |
-| **@-mention notifications** | Requires a notification system. Too much infrastructure for this cycle. |
-| **Email notifications** | Same — requires notification infrastructure + email service. |
-| **Page version history** | Liveblocks has Yjs history but exposing it as a user-facing feature requires significant UI work. Later. |
-| **Columns / multi-column layout** | BlockNote may support this eventually. Not worth custom work now. |
-| **File attachments / uploads** | Requires Firebase Storage or similar. Out of scope for document creation focus. |
-| **Embeds (500+ services)** | BlockNote supports some embeds out of the box. Not worth custom embed system. |
-| **Custom fonts / page styling** | Nice-to-have, not table stakes. |
-| **Dynamic link titles (auto-update)** | Requires Yjs content indexing + update propagation. Complex for marginal benefit. v2. |
-| **Backlinks** | Requires indexing which documents link to which. Doable but not critical for v1 linking. |
-| **Offline support** | Web-first. Notion's offline is broken too. Not a competitive disadvantage. |
-| **Desktop/mobile native apps** | Web app only for now. Responsive design covers mobile. |
-
----
-
-## Implementation Priority
-
-Ordered by impact and dependency:
-
-| Priority | Item | Rationale |
-|----------|------|-----------|
-| **P0** | 1.1 Document Search | Foundational UX. Users can't find their docs. Blocks adoption. |
-| **P0** | 1.4 Viewer Role | Required for public sharing to make sense. Must exist before 1.3. |
-| **P0** | 1.3 Public Sharing | Table stakes for document sharing. High-visibility feature. |
-| **P1** | 2.1 Share Menu Consolidation | Groups invite, manage, and publish into one clean UI. Depends on 1.3 + 1.4. |
-| **P1** | 1.2 Cover Images | High-impact visual feature. Makes documents feel polished. |
-| **P1** | 2.2 Title via Server Action | Security/consistency fix. Small effort. |
-| **P1** | 1.5 Page-Level Comments | Key collaboration feature. Independent of other work. |
-| **P2** | 2.3 Soft Delete (Trash) | Safety net. Users fear permanent deletion. |
-| **P2** | 1.6 Document Linking | Connects the knowledge graph. Depends on search data being available. |
+`firestore.indexes.json` defines one collection-group index on `rooms`: `roomId` ascending, `role` ascending. The ownership repair query needs it. Deploying it is an operator step; the app does not deploy Firebase.
