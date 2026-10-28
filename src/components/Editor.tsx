@@ -60,12 +60,17 @@ function BlockNote({
     return BlockNoteEditor.create({
       extensions: [
         CollaborationExtension({
+          // BlockNote 0.56 expects @y/y v14 Y.Node, but Liveblocks provides yjs v13 XmlFragment.
+          // These are structurally compatible at runtime despite different package origins.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fragment: doc.getXmlFragment("document-store") as any,
           user: {
             name: userName || "Anonymous",
             color: stringToColor(userEmail || "anonymous"),
           },
           provider: {
+            // Liveblocks awareness is compatible with y-protocols awareness but typed differently.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             awareness: provider.awareness as any,
           },
         }),
