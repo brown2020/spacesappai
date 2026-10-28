@@ -21,6 +21,7 @@ import {
 import { deleteCookie } from "cookies-next";
 import { auth } from "@/firebase/firebaseConfig";
 import { mapFirebaseAuthError } from "@/lib/firebaseAuthErrors";
+import { isSafeRedirectPath } from "@/lib/safe-redirect";
 import { AuthContext, type AuthContextType } from "./authContext";
 
 const googleProvider = new GoogleAuthProvider();
@@ -76,10 +77,7 @@ function readSafeRedirectPath(): string | null {
   const redirectPath = new URLSearchParams(window.location.search).get(
     "redirect"
   );
-  if (!redirectPath?.startsWith("/") || redirectPath.startsWith("//")) {
-    return null;
-  }
-  return redirectPath;
+  return isSafeRedirectPath(redirectPath) ? redirectPath : null;
 }
 
 function dispatchMappedError(
