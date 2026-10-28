@@ -20,6 +20,16 @@ export function getDocumentRef(roomId: string) {
   return adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId);
 }
 
+/** True when the user has any membership row for the document. */
+export async function userHasRoomAccess(
+  userId: string,
+  roomId: string
+): Promise<boolean> {
+  if (!userId || !roomId) return false;
+  const snap = await getUserRoomRef(userId, roomId).get();
+  return snap.exists;
+}
+
 /**
  * Verify user is owner of a room within a transaction.
  * Throws "FORBIDDEN" error if not owner.

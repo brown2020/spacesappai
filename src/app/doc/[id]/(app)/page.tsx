@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Document from "@/components/Document";
 import { adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/firebaseConfig";
+import { getAuthenticatedUser } from "@/lib/firebase-session";
+import { userHasRoomAccess } from "@/lib/firestore-helpers";
 
 // ============================================================================
 // TYPES
@@ -23,6 +25,10 @@ export async function generateMetadata({
     return { title: "Document" };
   }
   try {
+    const user = await getAuthenticatedUser();
+    if (!user || !(await userHasRoomAccess(user.uid, id))) {
+      return { title: "Document" };
+    }
     const snap = await adminDb.collection(COLLECTIONS.DOCUMENTS).doc(id).get();
     const title = (snap.data()?.title as string) || "Untitled";
     return { title };

@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import RoomProvider from "@/components/RoomProvider";
 import LiveBlocksProvider from "@/components/LiveBlocksProvider";
 import { requireAuthenticatedUserOrRedirect } from "@/lib/firebase-session";
+import { userHasRoomAccess } from "@/lib/firestore-helpers";
 import { ensureRoomHasOwner } from "@/lib/room-ownership";
 
 // ============================================================================
@@ -13,10 +15,18 @@ interface DocumentLayoutProps {
 }
 
 async function prepareDocumentRoom(id: string) {
+  if (!id || id.length > 128 || id.includes("/")) {
+    notFound();
+  }
+
   const user = await requireAuthenticatedUserOrRedirect(
     `/?redirect=${encodeURIComponent(`/doc/${id}`)}`
   );
   await ensureRoomHasOwner(id, user);
+  const allowed = await userHasRoomAccess(user.uid, id);
+  if (!allowed) {
+    notFound();
+  }
 }
 
 // ============================================================================
