@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { createElement, type ReactNode } from "react";
 import { adminDb } from "@/firebase/firebaseAdmin";
@@ -8,6 +7,13 @@ import { COLLECTIONS } from "@/firebase/firebaseConfig";
 import { liveblocks } from "@/lib/liveblocks";
 import * as Y from "yjs";
 import PageIcon from "@/components/PageIcon";
+import RemoteImage from "@/components/RemoteImage";
+
+/** Cache published HTML briefly so each view does not re-parse Yjs. */
+export const revalidate = 60;
+
+/** Reject Yjs payloads larger than this before applyUpdate. */
+const MAX_PUBLIC_YJS_BYTES = 2_000_000;
 
 // ============================================================================
 // TYPES
@@ -85,14 +91,12 @@ function xmlElementToReact(element: Y.XmlElement, key: number): ReactNode {
     const src = props.src;
     if (!src || !src.startsWith("https://")) return null;
     return (
-      <Image
+      <RemoteImage
         key={key}
         src={src}
         alt={props.alt ?? ""}
         width={props.width ? Number(props.width) || 800 : 800}
         height={props.height ? Number(props.height) || 450 : 450}
-        unoptimized
-        loader={({ src: s }) => s}
       />
     );
   }
@@ -156,7 +160,11 @@ export async function generateMetadata({
   }
   try {
     const docSnap = await adminDb.collection(COLLECTIONS.DOCUMENTS).doc(id).get();
-    const title = (docSnap.data()?.title as string) || "Untitled";
+    const data = docSnap.data();
+    if (!data?.isPublished) {
+      return { title: "Document" };
+    }
+    const title = (data.title as string) || "Untitled";
     return {
       title,
       description: `Published document: ${title}`,
@@ -193,29 +201,43 @@ export default async function PublicDocumentPage({ params }: PublicPageProps) {
   const rawCoverImage = (docData.coverImage as string | null) ?? null;
   const coverImage = rawCoverImage?.startsWith("https://") ? rawCoverImage : null;
 
-  let content: ReactNode = <p>Unable to load document content.</p>;
+  let content: ReactNode = null;
+  let contentStatus: "ok" | "unavailable" | "too-large" = "unavailable";
   try {
     const yjsData = await liveblocks.getYjsDocumentAsBinaryUpdate(id);
-    const yDoc = new Y.Doc();
-    Y.applyUpdate(yDoc, new Uint8Array(yjsData));
-    content = yDocToReact(yDoc);
-    yDoc.destroy();
+    const bytes = new Uint8Array(yjsData);
+    if (bytes.byteLength > MAX_PUBLIC_YJS_BYTES) {
+      contentStatus = "too-large";
+    } else {
+      const yDoc = new Y.Doc();
+      Y.applyUpdate(yDoc, bytes);
+      content = yDocToReact(yDoc);
+      yDoc.destroy();
+      contentStatus = "ok";
+    }
   } catch (error) {
     console.error("[public-page] Failed to fetch Yjs content:", error);
   }
+
+  const renderedContent =
+    contentStatus === "ok" ? (
+      content
+    ) : contentStatus === "too-large" ? (
+      <p>This document is too large to display.</p>
+    ) : (
+      <p>Unable to load document content.</p>
+    );
 
   return (
     <div className="min-h-screen bg-background">
       <article className="max-w-3xl mx-auto px-6 py-12">
         {coverImage && (
           <div className="h-48 rounded-lg overflow-hidden bg-muted mb-8 -mx-2">
-            <Image
+            <RemoteImage
               src={coverImage}
               alt=""
               width={1200}
               height={192}
-              unoptimized
-              loader={({ src }) => src}
               className="w-full h-full object-cover"
             />
           </div>
@@ -229,7 +251,7 @@ export default async function PublicDocumentPage({ params }: PublicPageProps) {
         </header>
 
         <div className="prose prose-sm sm:prose dark:prose-invert max-w-none">
-          {content}
+          {renderedContent}
         </div>
       </article>
 
