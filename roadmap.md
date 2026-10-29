@@ -2,6 +2,10 @@
 
 Punchlist after the October 2026 maintenance pass. Nothing here is a commitment to ship. `main` is promoted separately after QA.
 
+## Deployment
+
+Vercel project linked October 28, 2026 (team `ignitechannel`, project `spacesappai`, Node 24). Dev previews are at `spacesappai-git-dev-ignitechannel.vercel.app`. Collaboration and AI need the Liveblocks, Firebase client, Firebase server, and AI environment variables set in Vercel. Those are not set yet. The production build is expected to succeed without them.
+
 ## Operator steps
 
 - Deploy `firestore.rules` and `firestore.indexes.json` to the Firebase project. The repo does not deploy them. The collection-group index on `rooms` (`roomId`, `role`) is required for ownership repair.
