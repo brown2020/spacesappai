@@ -14,7 +14,7 @@ Vercel project linked October 28, 2026 (team `ignitechannel`, project `spacesapp
 
 ## Known bugs and risks
 
-- **Two Yjs stacks.** The editor imports `CollaborationExtension` from `@blocknote/core/y`, whose fragment type comes from `@y/y` v14, while the Liveblocks document is a `yjs` v13 `XmlFragment`. The mismatch is hidden by a cast. A runtime failure was not reproduced, so the import was left as it is. Confirm in a real two-user session before changing it.
+- **Yjs 14 entry is unused by the editor.** Liveblocks syncs a `yjs` v13 document. `@blocknote/core/y` expects an `@y/y` v14 node and throws `Expected value to be of type $Union` on `[ytype]` when the editor mounts, which the document error boundary shows as "Unable to load document". The editor imports `CollaborationExtension` from `@blocknote/core/yjs` instead. `@y/y` stays installed because BlockNote still ships that entry.
 - **`@y/*` dist-tags.** npm’s `latest` tag for `@y/protocols` points at an older prerelease than the version installed (`1.0.6-rc.1`). Those packages were not downgraded.
 - **Public unpublish lag.** `/doc/[id]/public` uses `revalidate = 60`. A page can stay cached for up to a minute after unpublish.
 - **Comments are polled.** `useComments` calls a server action every 10 seconds. It is not a Firestore listener.
@@ -25,7 +25,6 @@ Vercel project linked October 28, 2026 (team `ignitechannel`, project `spacesapp
 
 ## Next product work
 
-- Prove or replace the BlockNote `@blocknote/core/y` import so one Yjs implementation owns the editor fragment.
 - Decide whether CI should run on Node 24 to match the Firebase engine field.
 - Full-text search of document content, if title search is not enough.
 - Realtime comments, or a shorter refresh, if 10 second polling is too slow.

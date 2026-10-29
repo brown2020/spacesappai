@@ -7,7 +7,7 @@ import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { BlockNoteEditor } from "@blocknote/core";
-import { CollaborationExtension } from "@blocknote/core/y";
+import { CollaborationExtension } from "@blocknote/core/yjs";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
@@ -60,16 +60,16 @@ function BlockNote({
     return BlockNoteEditor.create({
       extensions: [
         CollaborationExtension({
-          // BlockNote 0.56 expects @y/y v14 Y.Node, but Liveblocks provides yjs v13 XmlFragment.
-          // These are structurally compatible at runtime despite different package origins.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fragment: doc.getXmlFragment("document-store") as any,
+          // LiveblocksYjsProvider syncs a yjs v13 document. @blocknote/core/yjs
+          // is the matching entry. @blocknote/core/y expects an @y/y v14 node
+          // and throws while mounting on this fragment.
+          fragment: doc.getXmlFragment("document-store"),
           user: {
             name: userName || "Anonymous",
             color: stringToColor(userEmail || "anonymous"),
           },
           provider: {
-            // Liveblocks awareness is compatible with y-protocols awareness but typed differently.
+            // Liveblocks awareness implements the methods the cursor plugin calls.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             awareness: provider.awareness as any,
           },
