@@ -18,18 +18,18 @@ A real-time collaborative document editor. Sign in with Firebase, create documen
 | Layer | Choice |
 | --- | --- |
 | Framework | Next.js `^16.4.3` (App Router) |
-| UI | React `^19.3.1`, Tailwind CSS `^4.3.3`, Radix primitives, Framer Motion `^14.7.1`, Lucide `1.63.0`, `next-themes` |
+| UI | React `^19.3.1`, Tailwind CSS `^4.3.3`, Radix primitives, Framer Motion `^14.9.0`, Lucide `1.66.0`, `next-themes` |
 | Language | TypeScript 7.0 (`tsc` via `@typescript/native`). `typescript` is aliased to `@typescript/typescript6` so ESLint can load the TypeScript 6 API |
-| Editor | BlockNote `^0.56.0`, TipTap `^3.32.1`, Yjs `^13.6.33` |
+| Editor | BlockNote `^0.57.0`, TipTap `^3.32.2`, Yjs `^13.6.33` |
 | Realtime | Liveblocks `^3.24.5` (`client`, `react`, `node`, `yjs`) |
 | Auth / data | Firebase `^13.1.0`, Firebase Admin `^14.5.0` |
-| AI | Vercel AI SDK `ai` `^7.0.156`, `@ai-sdk/rsc` `^3.0.156`, plus OpenAI, Anthropic, Google, and Mistral provider packages |
+| AI | Vercel AI SDK `ai` `^7.0.159`, `@ai-sdk/rsc` `^3.0.159`, plus OpenAI, Anthropic, Google, and Mistral provider packages |
 | Tests | Node.js test runner (`tests/*.test.ts`) |
-| Lint | ESLint `^10.13.0` with `eslint-config-next` |
+| Lint | ESLint `^10.14.0` with `eslint-config-next` |
 
-`firebase-admin` 14 depends on `jwks-rsa` 4. The lockfile keeps that package on `jose` `5.10.0` through the `overrides` field so the CommonJS `require("jose")` path keeps working.
+`firebase-admin` 14 depends on `jwks-rsa` 4. The lockfile keeps that package on `jose` `5.10.0` through the `overrides` field so the CommonJS `require("jose")` path keeps working. The same field pins `gcp-metadata` 8 to `gaxios` `7.3.1`, `rimraf` to `glob` `^14.0.3`, and ESLint’s direct `minimatch` (plus `@typescript-eslint/typescript-estree`) to `11.0.4`.
 
-Firebase’s own packages declare Node `>=24.12.0`. This repo’s CI and local checks run on Node 22. Install prints `EBADENGINE` and the SDK still loads. Do not treat that warning as a failed install.
+Firebase’s own packages declare Node `>=24.12.0`. CI and local checks run on Node 24. Use Node 24.12 or newer so `npm install` does not print `EBADENGINE`.
 
 ## Project structure
 
@@ -59,7 +59,7 @@ tests/
 
 ### Prerequisites
 
-- Node.js 22 (CI uses 22)
+- Node.js 24.12 or newer (CI uses Node 24)
 - npm
 - A Firebase project with Auth and Firestore, when you want sign-in and documents
 - A Liveblocks project, when you want collaboration
@@ -152,7 +152,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## CI
 
-`.github/workflows/ci.yml` runs on pushes to `dev` and `main`, and on pull requests. The job is `npm ci`, lint, typecheck, test, and build on Node 22. It does not inject secrets. A build with no Firebase or Liveblocks configuration is expected to pass.
+`.github/workflows/ci.yml` runs on pushes to `dev` and `main`, and on pull requests. The job is `npm ci`, lint, typecheck, test, and build on Node 24. It does not inject secrets. A build with no Firebase or Liveblocks configuration is expected to pass.
 
 ## Deployment
 
