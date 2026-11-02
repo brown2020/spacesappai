@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import * as Y from "yjs";
 import { toast } from "sonner";
 import { useStreamingRequest } from "@/hooks";
-import { getDocumentContent } from "@/lib/document-utils";
+import { readAiDocumentText } from "@/lib/document-utils";
 import { DEFAULT_AI_MODEL } from "@/constants";
 import type { AIModelName } from "@/types";
 import {
@@ -28,6 +28,8 @@ interface AIDialogChildrenProps {
   modelName: AIModelName;
   setModelName: (name: AIModelName) => void;
   isPending: boolean;
+  /** Portal target so selects stay inside the dialog and receive clicks. */
+  portalContainer: HTMLElement | null;
 }
 
 interface AIDialogProps {
@@ -47,6 +49,10 @@ interface AIDialogProps {
   emptyDocumentMessage?: string;
   /** Render prop for form content */
   children: (props: AIDialogChildrenProps) => ReactNode;
+  /** Return false to cancel submit after showing your own toast. */
+  beforeSubmit?: () => boolean;
+  /** Visible editor text. Falls back to the Yjs fragment when omitted. */
+  readDocument?: () => string | null;
   /** Handler for form submission - receives document content */
   onSubmit: (
     documentContent: string,
@@ -88,9 +94,12 @@ export default function AIDialog({
   errorMessage,
   emptyDocumentMessage = "Document is empty. Add some content first.",
   children,
+  beforeSubmit,
+  readDocument,
   onSubmit,
 }: AIDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [modelName, setModelName] = useState<AIModelName>(DEFAULT_AI_MODEL);
 
   const { isPending, result, execute, reset } = useStreamingRequest({
@@ -100,8 +109,17 @@ export default function AIDialog({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (beforeSubmit && !beforeSubmit()) return;
 
-    const content = getDocumentContent(doc);
+    let content: string | null;
+    try {
+      content = readDocument ? readDocument() : readAiDocumentText(doc);
+    } catch (error) {
+      console.error("[AIDialog] Failed to read document:", error);
+      toast.error(errorMessage);
+      return;
+    }
+
     if (!content) {
       toast.error(emptyDocumentMessage);
       return;
@@ -121,7 +139,10 @@ export default function AIDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="flex flex-col gap-4 w-[90vw] max-w-2xl max-h-[80vh]">
+      <DialogContent
+        ref={setPortalContainer}
+        className="flex flex-col gap-4 w-[90vw] max-w-2xl max-h-[80vh]"
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -131,7 +152,7 @@ export default function AIDialog({
           className="flex flex-col sm:flex-row gap-3"
           onSubmit={handleSubmit}
         >
-          {children({ modelName, setModelName, isPending })}
+          {children({ modelName, setModelName, isPending, portalContainer })}
         </form>
 
         {result && (

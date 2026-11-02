@@ -1,82 +1,51 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo, useSyncExternalStore } from "react";
-import dynamic from "next/dynamic";
 import { useRoom, useSelf } from "@liveblocks/react/suspense";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { BlockNoteEditor } from "@blocknote/core";
-import { CollaborationExtension } from "@blocknote/core/yjs";
+import { withCollaboration } from "@blocknote/core/yjs";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 
 import { useTheme } from "next-themes";
 import { useLatest, useOwner } from "@/hooks";
+import { readAiDocumentText } from "@/lib/document-utils";
+import { generateAnswer, generateSummary } from "@/lib/generateActions";
 import { Button } from "./ui/button";
 import { MoonIcon, SunIcon } from "lucide-react";
 import stringToColor from "@/lib/stringToColor";
+import TranslateDocument from "./TranslateDocument";
+import ChatToDocument from "./ChatToDocument";
 
-// Dynamic imports for code splitting - AI features are not needed until user clicks
-const TranslateDocument = dynamic(() => import("./TranslateDocument"), {
-  ssr: false,
-});
-const ChatToDocument = dynamic(() => import("./ChatToDocument"), {
-  ssr: false,
-});
+// Server actions are imported in this static client module and passed in.
+// A client-only dynamic import does not register them, so the click never
+// starts a request.
 
 // ============================================================================
 // BLOCKNOTE EDITOR COMPONENT
 // ============================================================================
 
 interface BlockNoteProps {
-  doc: Y.Doc;
-  provider: LiveblocksYjsProvider;
+  editor: BlockNoteEditor;
   darkMode: boolean;
   editable: boolean;
   onReady?: () => void;
-  userName?: string;
-  userEmail?: string;
 }
 
 function BlockNote({
-  doc,
-  provider,
+  editor,
   darkMode,
   editable,
   onReady,
-  userName,
-  userEmail,
 }: BlockNoteProps) {
   const hasSignaledReadyRef = useRef(false);
   const isDestroyedRef = useRef(false);
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onReadyRef = useLatest(onReady);
-
-  // Create editor during render (memoized) to avoid cascading setState in effects.
-  // User display fields are intentional deps so collaboration cursors stay accurate.
-  const editor = useMemo(() => {
-    return BlockNoteEditor.create({
-      extensions: [
-        CollaborationExtension({
-          // LiveblocksYjsProvider syncs a yjs v13 document. @blocknote/core/yjs
-          // is the matching entry. @blocknote/core/y expects an @y/y v14 node
-          // and throws while mounting on this fragment.
-          fragment: doc.getXmlFragment("document-store"),
-          user: {
-            name: userName || "Anonymous",
-            color: stringToColor(userEmail || "anonymous"),
-          },
-          provider: {
-            // Liveblocks awareness implements the methods the cursor plugin calls.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            awareness: provider.awareness as any,
-          },
-        }),
-      ],
-    });
-  }, [doc, provider, userName, userEmail]);
 
   useEffect(() => {
     hasSignaledReadyRef.current = false;
@@ -124,6 +93,7 @@ interface EditorToolbarProps {
   roomId: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  readDocument: () => string | null;
 }
 
 function EditorToolbar({
@@ -131,6 +101,7 @@ function EditorToolbar({
   roomId,
   darkMode,
   onToggleDarkMode,
+  readDocument,
 }: EditorToolbarProps) {
   const buttonStyles = darkMode
     ? "text-muted-foreground bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -138,8 +109,18 @@ function EditorToolbar({
 
   return (
     <div className="flex items-center gap-2 justify-end mb-10">
-      <TranslateDocument doc={doc} roomId={roomId} />
-      <ChatToDocument doc={doc} roomId={roomId} />
+      <TranslateDocument
+        doc={doc}
+        roomId={roomId}
+        readDocument={readDocument}
+        generateSummary={generateSummary}
+      />
+      <ChatToDocument
+        doc={doc}
+        roomId={roomId}
+        readDocument={readDocument}
+        generateAnswer={generateAnswer}
+      />
 
       <Button
         className={buttonStyles}
@@ -230,6 +211,33 @@ function EditorSession({
 
   const { doc, provider } = collab;
 
+  // withCollaboration disables ProseMirror history so y-prosemirror owns the
+  // document. Liveblocks syncs a yjs v13 doc; @blocknote/core/yjs matches it.
+  // @blocknote/core/y expects an @y/y v14 node and throws on this fragment.
+  const editor = useMemo(() => {
+    return BlockNoteEditor.create(
+      withCollaboration({
+        collaboration: {
+          fragment: doc.getXmlFragment("document-store"),
+          user: {
+            name: userName || "Anonymous",
+            color: stringToColor(userEmail || "anonymous"),
+          },
+          provider: {
+            // Liveblocks awareness implements the methods the cursor plugin calls.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            awareness: provider.awareness as any,
+          },
+        },
+      })
+    );
+  }, [doc, provider, userName, userEmail]);
+
+  const readDocument = useCallback(
+    () => readAiDocumentText(doc, editor),
+    [doc, editor]
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
       {canEdit && (
@@ -238,17 +246,15 @@ function EditorSession({
         roomId={room.id}
         darkMode={darkMode}
         onToggleDarkMode={onToggleDarkMode}
+        readDocument={readDocument}
       />
       )}
 
       <BlockNote
-        doc={doc}
-        provider={provider}
+        editor={editor}
         darkMode={darkMode}
         editable={canEdit}
         onReady={onReady}
-        userName={userName}
-        userEmail={userEmail}
       />
     </div>
   );

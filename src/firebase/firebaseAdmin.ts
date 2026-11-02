@@ -35,6 +35,13 @@ function getAdminCredentials() {
  * Lazy so `next build` can collect page data without server credentials in CI.
  */
 function initializeFirebaseAdmin(): App {
+  // Service-account credentials do not use the GCE metadata server. When the
+  // variable is unset, skip that probe so the first Admin call does not wait
+  // on 169.254.169.254 (about 3s) and push Liveblocks auth past its client timeout.
+  if (!process.env.METADATA_SERVER_DETECTION) {
+    process.env.METADATA_SERVER_DETECTION = "none";
+  }
+
   if (getApps().length > 0) {
     return getApps()[0];
   }

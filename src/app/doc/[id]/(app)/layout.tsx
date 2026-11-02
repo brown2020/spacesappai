@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import RoomProvider from "@/components/RoomProvider";
 import LiveBlocksProvider from "@/components/LiveBlocksProvider";
 import { requireAuthenticatedUserOrRedirect } from "@/lib/firebase-session";
-import { userHasRoomAccess } from "@/lib/firestore-helpers";
+import { getUserRoomMembership } from "@/lib/firestore-helpers";
+import { prefetchLiveblocksToken } from "@/lib/liveblocks-auth";
 import { ensureRoomHasOwner } from "@/lib/room-ownership";
 
 // ============================================================================
@@ -14,7 +15,7 @@ interface DocumentLayoutProps {
   params: Promise<{ id: string }>;
 }
 
-async function prepareDocumentRoom(id: string) {
+async function prepareDocumentRoom(id: string): Promise<string | null> {
   if (!id || id.length > 128 || id.includes("/")) {
     notFound();
   }
@@ -23,10 +24,13 @@ async function prepareDocumentRoom(id: string) {
     `/?redirect=${encodeURIComponent(`/doc/${id}`)}`
   );
   await ensureRoomHasOwner(id, user);
-  const allowed = await userHasRoomAccess(user.uid, id);
-  if (!allowed) {
+  const membership = await getUserRoomMembership(user.uid, id);
+  if (!membership) {
     notFound();
   }
+
+  if (!membership.role) return null;
+  return prefetchLiveblocksToken(user, id, membership.role);
 }
 
 // ============================================================================
@@ -38,10 +42,12 @@ export default async function DocumentLayout({
   params,
 }: DocumentLayoutProps) {
   const { id } = await params;
-  await prepareDocumentRoom(id);
+  const token = await prepareDocumentRoom(id);
 
   return (
-    <LiveBlocksProvider>
+    <LiveBlocksProvider
+      initialToken={token ? { roomId: id, token } : null}
+    >
       <RoomProvider roomId={id}>{children}</RoomProvider>
     </LiveBlocksProvider>
   );

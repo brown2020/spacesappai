@@ -19,6 +19,7 @@ interface AIModelSelectProps {
   onChange: (value: AIModelName) => void;
   disabled?: boolean;
   className?: string;
+  portalContainer?: HTMLElement | null;
 }
 
 // ============================================================================
@@ -34,6 +35,7 @@ export default function AIModelSelect({
   onChange,
   disabled,
   className = "w-full sm:w-44",
+  portalContainer,
 }: AIModelSelectProps) {
   return (
     <Select
@@ -44,7 +46,7 @@ export default function AIModelSelect({
       <SelectTrigger className={className}>
         <SelectValue placeholder="Select Model" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent container={portalContainer}>
         {AI_MODELS.map((model) => (
           <SelectItem key={model.value} value={model.value}>
             {model.label}

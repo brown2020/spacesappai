@@ -1,24 +1,58 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { LiveblocksProvider } from "@liveblocks/react/suspense";
 import { UI } from "@/constants";
-import type { ChildrenProps } from "@/types";
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+interface LiveBlocksProviderProps {
+  children: React.ReactNode;
+  /**
+   * Token minted while the document layout rendered. The first room connection
+   * uses it once, then later connects go through /api/auth-endpoint.
+   */
+  initialToken?: { roomId: string; token: string } | null;
+}
 
-/**
- * LiveBlocksProvider wraps the app with Liveblocks context for real-time collaboration.
- * Uses authEndpoint for authentication, which means the server-side secret key is used
- * (not the public key). The auth endpoint at /api/auth-endpoint handles authentication
- * and room access control.
- */
-export default function LiveBlocksProvider({ children }: ChildrenProps) {
+export default function LiveBlocksProvider({
+  children,
+  initialToken,
+}: LiveBlocksProviderProps) {
+  const initialTokenRef = useRef(initialToken);
+  const consumedRoomRef = useRef<string | null>(null);
+
+  const authEndpoint = useCallback(async (room?: string) => {
+    const seeded = initialTokenRef.current;
+    if (
+      seeded?.token &&
+      room &&
+      room === seeded.roomId &&
+      consumedRoomRef.current !== room
+    ) {
+      consumedRoomRef.current = room;
+      return { token: seeded.token };
+    }
+
+    const response = await fetch("/api/auth-endpoint", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room }),
+    });
+
+    try {
+      return await response.json();
+    } catch {
+      return {
+        error: "unauthorized",
+        reason: "Liveblocks authentication failed",
+      };
+    }
+  }, []);
+
   return (
     <LiveblocksProvider
       throttle={UI.LIVEBLOCKS_THROTTLE}
-      authEndpoint="/api/auth-endpoint"
+      authEndpoint={initialToken?.token ? authEndpoint : "/api/auth-endpoint"}
     >
       {children}
     </LiveblocksProvider>

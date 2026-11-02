@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/firebase/firebaseAdmin";
 import { COLLECTIONS } from "@/firebase/collections";
-import { liveblocks } from "@/lib/liveblocks";
+import { authorizeLiveblocksRoom } from "@/lib/liveblocks-auth";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 
 // ============================================================================
@@ -102,31 +102,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prepare Liveblocks session
-    const session = liveblocks.prepareSession(user.uid, {
-      userInfo: {
-        name: user.name ?? "Anonymous",
-        email: user.email ?? "anonymous",
-        avatar: user.picture ?? "",
-      },
-    });
-
     // Grant access based on role. Unknown roles fail closed.
-    if (role === "owner" || role === "editor") {
-      session.allow(roomId, session.FULL_ACCESS);
-    } else if (role === "viewer") {
-      session.allow(roomId, session.READ_ACCESS);
-    } else {
-      return apiErrorResponse(
-        403,
-        "Forbidden",
-        "You do not have access to this room"
-      );
+    const authorized = await authorizeLiveblocksRoom(user, roomId, role);
+    if (!authorized.ok) {
+      return apiErrorResponse(authorized.status, "Forbidden", authorized.message);
     }
 
-    // Authorize and return response
-    const { body: authBody, status } = await session.authorize();
-    return new NextResponse(authBody, { status });
+    return new NextResponse(authorized.body, { status: authorized.status });
   } catch (error) {
     console.error("[auth-endpoint] Error:", error);
 

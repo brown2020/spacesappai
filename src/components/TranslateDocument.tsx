@@ -3,9 +3,9 @@
 import { useState } from "react";
 import * as Y from "yjs";
 import { LanguagesIcon } from "lucide-react";
-import { generateSummary } from "@/lib/generateActions";
+import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS } from "@/constants";
-import type { SupportedLanguage } from "@/types";
+import type { AIModelName, SupportedLanguage } from "@/types";
 import { Button } from "./ui/button";
 import {
   Select,
@@ -24,13 +24,25 @@ import AIModelSelect from "./AIModelSelect";
 interface TranslateDocumentProps {
   doc: Y.Doc;
   roomId: string;
+  readDocument?: () => string | null;
+  generateSummary: (
+    roomId: string,
+    document: string,
+    language: string,
+    modelName: AIModelName
+  ) => Promise<unknown>;
 }
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export default function TranslateDocument({ doc, roomId }: TranslateDocumentProps) {
+export default function TranslateDocument({
+  doc,
+  roomId,
+  readDocument,
+  generateSummary,
+}: TranslateDocumentProps) {
   const [language, setLanguage] = useState<SupportedLanguage | "">("");
 
   return (
@@ -49,12 +61,18 @@ export default function TranslateDocument({ doc, roomId }: TranslateDocumentProp
       }
       errorMessage="Failed to translate. Please try again."
       emptyDocumentMessage="Document is empty. Add some content before translating."
+      readDocument={readDocument}
+      beforeSubmit={() => {
+        if (language) return true;
+        toast.error("Select a language first.");
+        return false;
+      }}
       onSubmit={(content, modelName) => {
         if (!language) return Promise.reject(new Error("Language is required"));
         return generateSummary(roomId, content, language, modelName);
       }}
     >
-      {({ modelName, setModelName, isPending }) => (
+      {({ modelName, setModelName, isPending, portalContainer }) => (
         <>
           <Select
             value={language}
@@ -64,7 +82,7 @@ export default function TranslateDocument({ doc, roomId }: TranslateDocumentProp
             <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Select Language" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent container={portalContainer}>
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <SelectItem key={lang} value={lang}>
                   {LANGUAGE_LABELS[lang]}
@@ -77,9 +95,10 @@ export default function TranslateDocument({ doc, roomId }: TranslateDocumentProp
             value={modelName}
             onChange={setModelName}
             disabled={isPending}
+            portalContainer={portalContainer}
           />
 
-          <Button type="submit" disabled={!language || isPending}>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Translating..." : "Translate"}
           </Button>
         </>

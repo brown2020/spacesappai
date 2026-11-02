@@ -20,14 +20,24 @@ export function getDocumentRef(roomId: string) {
   return adminDb.collection(COLLECTIONS.DOCUMENTS).doc(roomId);
 }
 
+/** Membership row for a document, or null when the user has no access. */
+export async function getUserRoomMembership(
+  userId: string,
+  roomId: string
+): Promise<{ role: string | null } | null> {
+  if (!userId || !roomId) return null;
+  const snap = await getUserRoomRef(userId, roomId).get();
+  if (!snap.exists) return null;
+  const role = snap.data()?.role;
+  return { role: typeof role === "string" && role.length > 0 ? role : null };
+}
+
 /** True when the user has any membership row for the document. */
 export async function userHasRoomAccess(
   userId: string,
   roomId: string
 ): Promise<boolean> {
-  if (!userId || !roomId) return false;
-  const snap = await getUserRoomRef(userId, roomId).get();
-  return snap.exists;
+  return (await getUserRoomMembership(userId, roomId)) !== null;
 }
 
 /**

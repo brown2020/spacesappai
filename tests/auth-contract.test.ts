@@ -15,15 +15,18 @@ describe("auth and mutation contracts", () => {
   });
 
   it("Liveblocks auth endpoint requires session before granting room access", () => {
-    const src = readFileSync(
+    const route = readFileSync(
       join(root, "src/app/api/auth-endpoint/route.ts"),
       "utf8"
     );
-    assert.match(src, /requireAuthenticatedUser/);
-    assert.match(src, /prepareSession/);
-    assert.match(src, /authorize/);
-    assert.match(src, /role === "owner" \|\| role === "editor"/);
-    assert.doesNotMatch(src, /session\.FULL_ACCESS[\s\S]{0,80}else \{/);
+    const helper = readFileSync(join(root, "src/lib/liveblocks-auth.ts"), "utf8");
+    assert.match(route, /requireAuthenticatedUser/);
+    assert.match(route, /authorizeLiveblocksRoom/);
+    assert.match(helper, /prepareSession/);
+    assert.match(helper, /authorize\(/);
+    assert.match(helper, /role === "owner" \|\| role === "editor"/);
+    assert.match(helper, /session\.READ_ACCESS/);
+    assert.doesNotMatch(helper, /else \{[\s\S]{0,160}FULL_ACCESS/);
   });
 
   it("session route verifies Firebase session cookies server-side", () => {
@@ -40,7 +43,20 @@ describe("auth and mutation contracts", () => {
   it("document layout enforces auth before RoomProvider", () => {
     const src = readFileSync(join(root, "src/app/doc/[id]/(app)/layout.tsx"), "utf8");
     assert.match(src, /requireAuthenticatedUserOrRedirect/);
-    assert.match(src, /userHasRoomAccess/);
+    assert.match(src, /getUserRoomMembership/);
+    assert.match(src, /prefetchLiveblocksToken/);
     assert.match(src, /RoomProvider/);
+    assert.match(src, /notFound\(\)/);
+
+    const admin = readFileSync(join(root, "src/firebase/firebaseAdmin.ts"), "utf8");
+    const provider = readFileSync(
+      join(root, "src/components/LiveBlocksProvider.tsx"),
+      "utf8"
+    );
+    const select = readFileSync(join(root, "src/components/ui/select.tsx"), "utf8");
+    assert.match(admin, /METADATA_SERVER_DETECTION = "none"/);
+    assert.match(provider, /initialToken/);
+    assert.match(select, /pointer-events-auto/);
+    assert.match(select, /z-\[200\]/);
   });
 });
