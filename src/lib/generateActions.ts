@@ -1,7 +1,7 @@
 "use server";
 
 import { createStreamableValue } from "@ai-sdk/rsc";
-import { streamText, type ModelMessage } from "ai";
+import { streamText } from "ai";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { mistral } from "@ai-sdk/mistral";
@@ -168,18 +168,49 @@ async function generateStreamingResponse(
   modelName: AIModelName
 ) {
   const model = getModel(modelName);
+  const stream = createStreamableValue("");
+  let settled = false;
 
-  const messages: ModelMessage[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt },
-  ];
+  // textStream drops error parts, so a failed call never rejects and the
+  // client waits. Close the RSC stream with a plain string the client can throw.
+  const fail = (error: unknown) => {
+    console.error("[generateStreamingResponse] Error:", error);
+    if (settled) return;
+    settled = true;
+    stream.error("The AI request failed. Please try again.");
+  };
 
   const result = streamText({
     model,
-    messages,
+    // ai v7 accepts system guidance only through instructions.
+    instructions: systemPrompt,
+    prompt: userPrompt,
+    onError({ error }) {
+      fail(error);
+    },
   });
 
-  const stream = createStreamableValue(result.textStream);
+  void (async () => {
+    try {
+      for await (const part of result.stream) {
+        if (settled) return;
+        if (part.type === "error") {
+          fail(part.error);
+          return;
+        }
+        if (part.type === "text-delta") {
+          stream.append(part.text);
+        }
+      }
+      if (!settled) {
+        settled = true;
+        stream.done();
+      }
+    } catch (error) {
+      fail(error);
+    }
+  })();
+
   return stream.value;
 }
 
