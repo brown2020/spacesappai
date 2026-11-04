@@ -39,6 +39,13 @@ export default function LiveBlocksProvider({
       body: JSON.stringify({ room }),
     });
 
+    if (!response.ok) {
+      return {
+        error: response.status === 403 ? "forbidden" : "unauthorized",
+        reason: "Liveblocks authentication failed",
+      };
+    }
+
     try {
       return await response.json();
     } catch {

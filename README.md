@@ -17,12 +17,12 @@ A real-time collaborative document editor. Sign in with Firebase, create documen
 
 | Layer | Choice |
 | --- | --- |
-| Framework | Next.js `^16.4.3` (App Router) |
-| UI | React `^19.3.1`, Tailwind CSS `^4.3.3`, Radix primitives, Framer Motion `^14.9.0`, Lucide `1.66.0`, `next-themes` |
+| Framework | Next.js `^16.4.5` (App Router) |
+| UI | React `^19.3.1`, Tailwind CSS `^4.3.4`, Radix primitives, Framer Motion `^14.9.1`, Lucide `^1.68.0`, `next-themes` |
 | Language | TypeScript 7.0 (`tsc` via `@typescript/native`). `typescript` is aliased to `@typescript/typescript6` so ESLint can load the TypeScript 6 API |
 | Editor | BlockNote `^0.57.0`, TipTap `^3.32.2`, Yjs `^13.6.33` |
 | Realtime | Liveblocks `^3.24.5` (`client`, `react`, `node`, `yjs`) |
-| Auth / data | Firebase `^13.1.0`, Firebase Admin `^14.5.0` |
+| Auth / data | Firebase `^13.2.0`, Firebase Admin `^14.5.0` |
 | AI | Vercel AI SDK `ai` `^7.0.159`, `@ai-sdk/rsc` `^3.0.159`, plus OpenAI, Anthropic, Google, and Mistral provider packages |
 | Tests | Node.js test runner (`tests/*.test.ts`) |
 | Lint | ESLint `^10.14.0` with `eslint-config-next` |

@@ -56,6 +56,7 @@ describe("auth and mutation contracts", () => {
     const select = readFileSync(join(root, "src/components/ui/select.tsx"), "utf8");
     assert.match(admin, /METADATA_SERVER_DETECTION = "none"/);
     assert.match(provider, /initialToken/);
+    assert.match(provider, /response\.ok/);
     assert.match(select, /pointer-events-auto/);
     assert.match(select, /z-\[200\]/);
   });
