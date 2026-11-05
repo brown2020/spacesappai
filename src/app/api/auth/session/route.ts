@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/firebase/firebaseAdmin";
-import { SESSION_COOKIE_NAME } from "@/lib/firebase-session";
+import { getAuthenticatedUser, SESSION_COOKIE_NAME } from "@/lib/firebase-session";
 import { isProd } from "@/lib/client-env";
 import { isRecentAuthTime, isTrustedSessionPost } from "@/lib/session-guards";
 
@@ -12,6 +12,22 @@ const SESSION_COOKIE_OPTIONS = {
   sameSite: "lax" as const,
   path: "/",
 } as const;
+
+/**
+ * Read the current session. Missing or invalid cookies are a signed-out
+ * state, not an error, so a page load can ask without a 401 in the console.
+ */
+export async function GET() {
+  const user = await getAuthenticatedUser();
+  return NextResponse.json(
+    {
+      session: user
+        ? { uid: user.uid, email: user.email, name: user.name }
+        : null,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}
 
 export async function POST(req: Request) {
   if (

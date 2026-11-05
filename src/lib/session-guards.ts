@@ -8,6 +8,32 @@ export function isRecentAuthTime(authTimeSeconds: number, nowMs = Date.now()): b
   return ageMs >= -CLOCK_SKEW_MS && ageMs <= MAX_AUTH_AGE_MS;
 }
 
+export type ObservedSessionAction = "mint" | "clear" | "skip";
+
+/**
+ * What to do with the httpOnly session after a Firebase auth callback.
+ * Mint only for a fresh sign-in. An older signed-in user keeps the existing
+ * cookie — posting that ID token is rejected with 401. Clear only when auth
+ * has settled on signed-out. A callback that does not match the current user
+ * is stale and must not clear or replace the cookie.
+ */
+export function observedSessionAction(input: {
+  callbackUid: string | null;
+  currentUid: string | null;
+  authTimeSeconds: number | null;
+  nowMs?: number;
+}): ObservedSessionAction {
+  if (input.currentUid !== input.callbackUid) return "skip";
+  if (input.callbackUid == null) return "clear";
+  if (
+    input.authTimeSeconds == null ||
+    !isRecentAuthTime(input.authTimeSeconds, input.nowMs)
+  ) {
+    return "skip";
+  }
+  return "mint";
+}
+
 /**
  * Session minting is a cookie-setting POST. Require JSON and a same-origin
  * Origin header so a cross-site form cannot plant a session cookie.

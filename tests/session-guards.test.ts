@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isRecentAuthTime, isTrustedSessionPost } from "../src/lib/session-guards.ts";
+import {
+  isRecentAuthTime,
+  isTrustedSessionPost,
+  observedSessionAction,
+} from "../src/lib/session-guards.ts";
 
 const NOW = 1_700_000_000_000;
 
@@ -56,6 +60,64 @@ describe("session guards", () => {
         contentType: "application/json",
       }),
       false
+    );
+  });
+
+  it("mints a session only for the user who just signed in", () => {
+    const now = 1_700_000_000_000;
+    assert.equal(
+      observedSessionAction({
+        callbackUid: "user-a",
+        currentUid: "user-a",
+        authTimeSeconds: now / 1000 - 30,
+        nowMs: now,
+      }),
+      "mint"
+    );
+    assert.equal(
+      observedSessionAction({
+        callbackUid: "user-a",
+        currentUid: "user-a",
+        authTimeSeconds: now / 1000 - 60 * 60,
+        nowMs: now,
+      }),
+      "skip"
+    );
+    assert.equal(
+      observedSessionAction({
+        callbackUid: "user-a",
+        currentUid: "user-a",
+        authTimeSeconds: null,
+        nowMs: now,
+      }),
+      "skip"
+    );
+  });
+
+  it("clears a session only after auth has settled on signed-out", () => {
+    assert.equal(
+      observedSessionAction({
+        callbackUid: null,
+        currentUid: null,
+        authTimeSeconds: null,
+      }),
+      "clear"
+    );
+    assert.equal(
+      observedSessionAction({
+        callbackUid: null,
+        currentUid: "user-a",
+        authTimeSeconds: null,
+      }),
+      "skip"
+    );
+    assert.equal(
+      observedSessionAction({
+        callbackUid: "user-a",
+        currentUid: null,
+        authTimeSeconds: 1_700_000_000,
+      }),
+      "skip"
     );
   });
 });
