@@ -12,6 +12,7 @@ export const AI_MODELS: readonly AIModelOption[] = [
   { label: "GPT-6.1 Sol", value: "gpt-6.1-sol" },
   { label: "Claude Opus 5.5", value: "claude-opus-5-5" },
   { label: "Gemini 4 Argon", value: "gemini-4-argon" },
+  { label: "Grok 4.7", value: "grok-4.7" },
 ] as const;
 
 /**

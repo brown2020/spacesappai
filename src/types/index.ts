@@ -52,7 +52,8 @@ export interface Comment {
 export type AIModelName =
   | "gpt-6.1-sol"
   | "claude-opus-5-5"
-  | "gemini-4-argon";
+  | "gemini-4-argon"
+  | "grok-4.7";
 
 /**
  * AI model option for select dropdowns

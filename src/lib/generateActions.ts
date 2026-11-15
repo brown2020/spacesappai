@@ -5,6 +5,7 @@ import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { anthropic } from "@ai-sdk/anthropic";
+import { xai } from "@ai-sdk/xai";
 import { AI_PROMPTS, AI_LIMITS } from "@/constants";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import {
@@ -115,12 +116,15 @@ async function consumeAuthorizedQuota(uid: string): Promise<ActionResponse | nul
  * Model mapping for each provider.
  * Claude Opus 5.5 rejects temperature/top_p/top_k and forced tool_choice, so
  * streamText below must not set them; @ai-sdk/anthropic also strips them.
+ * Grok 4.7 rejects presence_penalty, frequency_penalty and stop; they are
+ * likewise never set here, and @ai-sdk/xai drops them.
  * GPT-6.1 Sol needs the Responses API for tool calling.
  */
 const MODEL_MAP = {
   "gpt-6.1-sol": () => openai.responses("gpt-6.1-sol"),
   "claude-opus-5-5": () => anthropic("claude-opus-5-5"),
   "gemini-4-argon": () => google("gemini-4-argon"),
+  "grok-4.7": () => xai.responses("grok-4.7"),
 } as const satisfies Record<AIModelName, () => unknown>;
 
 /**

@@ -139,7 +139,7 @@ src/
 ### AI Features
 - **Translate document** — summarize + translate to 10 languages via streaming
 - **Chat with document** — ask questions about document content
-- **Model selection** — GPT-6.1 Sol (default), Claude Opus 5.5, Gemini 4 Argon
+- **Model selection** — GPT-6.1 Sol (default), Claude Opus 5.5, Gemini 4 Argon, Grok 4.7
 - AI features are dialog-based (modal popup, not inline)
 
 ### Navigation & Organization

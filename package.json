@@ -15,6 +15,7 @@
     "@ai-sdk/google": "^4.0.111",
     "@ai-sdk/openai": "^4.0.108",
     "@ai-sdk/rsc": "^3.0.162",
+    "@ai-sdk/xai": "^5.0.38",
     "@blocknote/core": "^0.57.0",
     "@blocknote/shadcn": "^0.57.0",
     "@liveblocks/client": "^3.24.5",

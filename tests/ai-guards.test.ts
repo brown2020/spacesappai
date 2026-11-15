@@ -14,7 +14,7 @@ describe("AI request guards", () => {
   it("allowlists exactly the current flagship models", () => {
     assert.deepEqual(
       [...AI_MODEL_NAMES].sort(),
-      ["claude-opus-5-5", "gemini-4-argon", "gpt-6.1-sol"]
+      ["claude-opus-5-5", "gemini-4-argon", "gpt-6.1-sol", "grok-4.7"]
     );
     for (const model of AI_MODEL_NAMES) {
       assert.equal(isSupportedAiModel(model), true);
@@ -34,6 +34,10 @@ describe("AI request guards", () => {
       "openai/gpt-6.1-sol",
       "anthropic/claude-opus-5.5",
       "google/gemini-4-argon",
+      "spacexai/grok-4.7",
+      "xai/grok-4.7",
+      "grok-beta",
+      "xai-grok",
       "constructor",
       "",
       undefined,
