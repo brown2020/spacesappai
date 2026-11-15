@@ -14,6 +14,13 @@ import {
   normalizeAiQuestion,
 } from "@/lib/ai-guards";
 import { errorResponse } from "@/lib/action-utils";
+import {
+  AI_FAILURE_MESSAGE,
+  getAiProviderOptions,
+  pipeModelStream,
+  remainingStreamTimeoutMs,
+  type TextStreamSink,
+} from "@/lib/ai-stream";
 import { isUnauthorizedError, requireAuthenticatedUser } from "@/lib/firebase-session";
 import { getUserRoomRef } from "@/lib/firestore-helpers";
 import type { AIModelName, ActionResponse } from "@/types";
@@ -150,19 +157,31 @@ function getModel(modelName: AIModelName) {
 async function generateStreamingResponse(
   systemPrompt: string,
   userPrompt: string,
-  modelName: AIModelName
+  modelName: AIModelName,
+  actionStartedAtMs: number
 ) {
   const model = getModel(modelName);
   const stream = createStreamableValue("");
   let settled = false;
 
-  // textStream drops error parts, so a failed call never rejects and the
-  // client waits. Close the RSC stream with a plain string the client can throw.
-  const fail = (error: unknown) => {
+  // Close the RSC stream exactly once, with a plain string the client can throw.
+  const sink: TextStreamSink = {
+    append(text) {
+      if (!settled) stream.append(text);
+    },
+    done() {
+      if (settled) return;
+      settled = true;
+      stream.done();
+    },
+    error(message) {
+      if (settled) return;
+      settled = true;
+      stream.error(message);
+    },
+  };
+  const logFailure = (error: unknown) => {
     console.error("[generateStreamingResponse] Error:", error);
-    if (settled) return;
-    settled = true;
-    stream.error("The AI request failed. Please try again.");
   };
 
   const result = streamText({
@@ -170,31 +189,17 @@ async function generateStreamingResponse(
     // ai v7 accepts system guidance only through instructions.
     instructions: systemPrompt,
     prompt: userPrompt,
+    providerOptions: getAiProviderOptions(modelName),
+    timeout: {
+      totalMs: remainingStreamTimeoutMs(actionStartedAtMs, Date.now()),
+    },
     onError({ error }) {
-      fail(error);
+      logFailure(error);
+      sink.error(AI_FAILURE_MESSAGE);
     },
   });
 
-  void (async () => {
-    try {
-      for await (const part of result.stream) {
-        if (settled) return;
-        if (part.type === "error") {
-          fail(part.error);
-          return;
-        }
-        if (part.type === "text-delta") {
-          stream.append(part.text);
-        }
-      }
-      if (!settled) {
-        settled = true;
-        stream.done();
-      }
-    } catch (error) {
-      fail(error);
-    }
-  })();
+  void pipeModelStream(result.stream, sink, logFailure);
 
   return stream.value;
 }
@@ -217,6 +222,7 @@ export async function generateSummary(
   language: string,
   modelName: AIModelName
 ): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
+  const startedAtMs = Date.now();
   try {
     const authorized = await authorizeAiRequest(roomId, modelName);
     if ("success" in authorized) return authorized;
@@ -235,7 +241,12 @@ export async function generateSummary(
 
     const userPrompt = `Provided document:\n${prepared.document}\n\nProvided language:\n${language}`;
 
-    return generateStreamingResponse(AI_PROMPTS.TRANSLATION, userPrompt, authorized.model);
+    return generateStreamingResponse(
+      AI_PROMPTS.TRANSLATION,
+      userPrompt,
+      authorized.model,
+      startedAtMs
+    );
   } catch (error) {
     console.error("[generateSummary] Error:", error);
     if (isUnauthorizedError(error)) {
@@ -262,6 +273,7 @@ export async function generateAnswer(
   question: string,
   modelName: AIModelName
 ): Promise<ReturnType<typeof createStreamableValue>["value"] | ActionResponse> {
+  const startedAtMs = Date.now();
   try {
     const authorized = await authorizeAiRequest(roomId, modelName);
     if ("success" in authorized) return authorized;
@@ -287,7 +299,8 @@ export async function generateAnswer(
     return generateStreamingResponse(
       AI_PROMPTS.QUESTION_ANSWER,
       userPrompt,
-      authorized.model
+      authorized.model,
+      startedAtMs
     );
   } catch (error) {
     console.error("[generateAnswer] Error:", error);

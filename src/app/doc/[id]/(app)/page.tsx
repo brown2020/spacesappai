@@ -5,6 +5,10 @@ import { COLLECTIONS } from "@/firebase/collections";
 import { getAuthenticatedUser } from "@/lib/firebase-session";
 import { userHasRoomAccess } from "@/lib/firestore-helpers";
 
+// AI server actions run in this route's function and stream until the reply
+// ends. Keep equal to AI_FUNCTION_MAX_DURATION_S in src/lib/ai-stream.ts.
+export const maxDuration = 60;
+
 // ============================================================================
 // TYPES
 // ============================================================================

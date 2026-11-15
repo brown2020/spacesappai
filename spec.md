@@ -92,6 +92,8 @@ Models (default `gpt-6.1-sol`):
 
 Any other model id, including the retired `gpt-4o`, `gemini-1.5-pro`, `mistral-large`, `claude-3-5-sonnet`, `llama-v3p1-405b`, `grok-beta`, and `xai-grok`, is rejected as unsupported. Model choice is per-dialog state and is not persisted.
 
+The AI server actions run in the `/doc/[id]` route function (`maxDuration = 60`). Each reply has a 55s deadline measured from when the action started; a reply still streaming at the deadline ends with a "Response stopped" notice instead of being killed. Grok 4.7 replies use low reasoning effort. The per-user AI rate limit counts the request when it starts, so a cut-off reply leaves nothing pending.
+
 Languages: english, french, spanish, german, italian, portuguese, chinese, russian, hindi, japanese.
 
 Limits:
