@@ -50,11 +50,9 @@ export interface Comment {
  * Supported AI model names
  */
 export type AIModelName =
-  | "gpt-4o"
-  | "gemini-1.5-pro"
-  | "mistral-large"
-  | "claude-3-5-sonnet"
-  | "llama-v3p1-405b";
+  | "gpt-6.1-sol"
+  | "claude-opus-5-5"
+  | "gemini-4-argon";
 
 /**
  * AI model option for select dropdowns

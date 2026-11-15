@@ -2,9 +2,8 @@
 
 import { createStreamableValue } from "@ai-sdk/rsc";
 import { streamText } from "ai";
-import { createOpenAI, openai } from "@ai-sdk/openai";
+import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
-import { mistral } from "@ai-sdk/mistral";
 import { anthropic } from "@ai-sdk/anthropic";
 import { AI_PROMPTS, AI_LIMITS } from "@/constants";
 import { consumeAiQuota } from "@/lib/ai-quota";
@@ -109,38 +108,20 @@ async function consumeAuthorizedQuota(uid: string): Promise<ActionResponse | nul
 }
 
 // ============================================================================
-// AI PROVIDER CONFIGURATION
-// ============================================================================
-
-/**
- * Fireworks AI provider for open-source models
- */
-function getFireworks() {
-  const apiKey = process.env.FIREWORKS_API_KEY;
-  if (!apiKey) {
-    throw new Error("FIREWORKS_API_KEY is not configured");
-  }
-  return createOpenAI({
-    apiKey,
-    baseURL: "https://api.fireworks.ai/inference/v1",
-  });
-}
-
-// ============================================================================
 // MODEL RESOLUTION
 // ============================================================================
 
 /**
- * Model mapping for each provider
+ * Model mapping for each provider.
+ * Claude Opus 5.5 rejects temperature/top_p/top_k and forced tool_choice, so
+ * streamText below must not set them; @ai-sdk/anthropic also strips them.
+ * GPT-6.1 Sol needs the Responses API for tool calling.
  */
 const MODEL_MAP = {
-  "gpt-4o": () => openai("gpt-4o"),
-  "gemini-1.5-pro": () => google("gemini-1.5-pro-latest"),
-  "mistral-large": () => mistral("mistral-large-latest"),
-  "claude-3-5-sonnet": () => anthropic("claude-3-5-sonnet-latest"),
-  "llama-v3p1-405b": () =>
-    getFireworks()("accounts/fireworks/models/llama-v3p1-405b-instruct"),
-} as const;
+  "gpt-6.1-sol": () => openai.responses("gpt-6.1-sol"),
+  "claude-opus-5-5": () => anthropic("claude-opus-5-5"),
+  "gemini-4-argon": () => google("gemini-4-argon"),
+} as const satisfies Record<AIModelName, () => unknown>;
 
 /**
  * Get the AI model instance for a given model name

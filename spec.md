@@ -83,13 +83,13 @@ Document content lives in the Liveblocks Yjs room, not in Firestore. Firestore s
 
 ## AI
 
-Models, unchanged:
+Models (default `gpt-6.1-sol`):
 
-- `gpt-4o`
-- `gemini-1.5-pro`
-- `mistral-large`
-- `claude-3-5-sonnet`
-- `llama-v3p1-405b` (Fireworks)
+- `gpt-6.1-sol` (OpenAI, Responses API)
+- `claude-opus-5-5` (Anthropic)
+- `gemini-4-argon` (Google)
+
+Any other model id, including the retired `gpt-4o`, `gemini-1.5-pro`, `mistral-large`, `claude-3-5-sonnet`, and `llama-v3p1-405b`, is rejected as unsupported. Model choice is per-dialog state and is not persisted.
 
 Languages: english, french, spanish, german, italian, portuguese, chinese, russian, hindi, japanese.
 

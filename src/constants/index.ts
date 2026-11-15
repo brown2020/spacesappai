@@ -9,17 +9,15 @@ import { AI_INPUT_LIMITS, AI_LANGUAGE_NAMES } from "@/lib/ai-guards";
  * Available AI models for document operations
  */
 export const AI_MODELS: readonly AIModelOption[] = [
-  { label: "GPT-4 Omni", value: "gpt-4o" },
-  { label: "Gemini 1.5 Pro", value: "gemini-1.5-pro" },
-  { label: "Mistral Large", value: "mistral-large" },
-  { label: "Claude 3.5 Sonnet", value: "claude-3-5-sonnet" },
-  { label: "LLaMA 3.1 405B", value: "llama-v3p1-405b" },
+  { label: "GPT-6.1 Sol", value: "gpt-6.1-sol" },
+  { label: "Claude Opus 5.5", value: "claude-opus-5-5" },
+  { label: "Gemini 4 Argon", value: "gemini-4-argon" },
 ] as const;
 
 /**
  * Default AI model
  */
-export const DEFAULT_AI_MODEL = "gpt-4o" as const;
+export const DEFAULT_AI_MODEL = "gpt-6.1-sol" as const;
 
 // ============================================================================
 // LANGUAGES

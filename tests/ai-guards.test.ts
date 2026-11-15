@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   AI_INPUT_LIMITS,
+  AI_MODEL_NAMES,
   evaluateAiQuota,
   isDocumentWithinInputLimit,
   isSupportedAiModel,
@@ -10,10 +11,39 @@ import {
 } from "../src/lib/ai-guards.ts";
 
 describe("AI request guards", () => {
-  it("allowlists models and languages", () => {
-    assert.equal(isSupportedAiModel("gpt-4o"), true);
-    assert.equal(isSupportedAiModel("constructor"), false);
-    assert.equal(isSupportedAiModel("gpt-5"), false);
+  it("allowlists exactly the current flagship models", () => {
+    assert.deepEqual(
+      [...AI_MODEL_NAMES].sort(),
+      ["claude-opus-5-5", "gemini-4-argon", "gpt-6.1-sol"]
+    );
+    for (const model of AI_MODEL_NAMES) {
+      assert.equal(isSupportedAiModel(model), true);
+    }
+  });
+
+  it("rejects retired, gateway-form and unknown model ids", () => {
+    for (const model of [
+      "gpt-4o",
+      "gemini-1.5-pro",
+      "gemini-1.5-pro-latest",
+      "mistral-large",
+      "claude-3-5-sonnet",
+      "claude-3-5-sonnet-latest",
+      "llama-v3p1-405b",
+      "gpt-5",
+      "openai/gpt-6.1-sol",
+      "anthropic/claude-opus-5.5",
+      "google/gemini-4-argon",
+      "constructor",
+      "",
+      undefined,
+      null,
+    ]) {
+      assert.equal(isSupportedAiModel(model), false, String(model));
+    }
+  });
+
+  it("allowlists languages", () => {
     assert.equal(isSupportedLanguage("french"), true);
     assert.equal(isSupportedLanguage("French"), false);
     assert.equal(isSupportedLanguage("klingon"), false);
